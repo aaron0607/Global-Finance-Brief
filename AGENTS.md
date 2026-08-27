@@ -105,3 +105,4 @@
 - 服务器 `.secrets.env`（chmod 600）必填 `DEEPSEEK_API_KEY`；`JIN10_MCP_TOKEN`、`LARK_APP_ID`、`LARK_APP_SECRET` 按数据源需要选配。cron 重定向前必须先创建 `logs/`。
 - `fetch_views.py` 失败属于非致命告警；行情或新闻失败、结构/字数校验失败、构建失败均必须终止。DeepSeek 自动稿没有实时 WebSearch，发布前建议复核关键数字。
 - 本机工作副本是唯一权威修改处；脚本、规则或文档变更必须测试后同步服务器，禁止直接在服务器形成长期分叉。
+- 同步方式：本机仓库已配置 `production` remote（`ssh://ubuntu@115.159.56.153/home/ubuntu/finance-brief.git`，走裸仓库 `post-receive` hook 自动 `checkout -f` 到 `/home/ubuntu/finance-brief`），改完代码/规则后本机执行 `git push production main` 即可单向同步；服务器不会反向推送，每日抓取生成的运行数据不受影响。`core.sshCommand` 已在本地仓库配置指向 `~/.ssh/lct_cloud`，无需每次手动指定密钥。
