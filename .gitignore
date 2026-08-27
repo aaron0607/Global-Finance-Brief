@@ -1,0 +1,25 @@
+# 运行环境与缓存
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+
+# 本地专属配置（含机器相关路径，不共享）
+.claude/settings.local.json
+
+# 密钥（仅保留 .secrets.env.example 作为模板）
+.secrets.env
+
+# 每日抓取/生成的运行数据（可重新生成，不作为源码版本管理）
+market_snapshot.json
+news_feed.json
+views_feed.json
+views_feed.txt
+qdii_cache.json
+
+# 每日内容与成稿产出物（文件名自带日期，作为历史归档，不纳入 git）
+content_2[0-9][0-9][0-9][0-9][0-9][0-9][0-9].json
+wechat_article_2[0-9][0-9][0-9][0-9][0-9][0-9][0-9].html
+
+# 调试/事故留档，非源码
+backups/
