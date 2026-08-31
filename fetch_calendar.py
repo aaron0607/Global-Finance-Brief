@@ -311,14 +311,21 @@ def group_events(items: list[dict]) -> list[dict]:
         head = members[0]
         titles = [head["title"]]
         prefix = ""
-        m = re.match(r"^(%s)(第[一二三四]季度|\d{1,2}月|至\d{1,2}月\d{1,2}日当周)?" % re.escape(region),
-                     head["title"]) if region else None
-        if m:
-            prefix = m.group(0)
-        for other in members[1:3] if kind == "data" else []:
+        if region:
+            m = re.match(r"^(%s)(第[一二三四]季度|\d{1,2}月|至\d{1,2}月\d{1,2}日当周)?" % re.escape(region),
+                         head["title"])
+            if m:
+                prefix = m.group(0)
+        # 只并入另一条同样是关键指标的数据（如非农+失业率），避免把分项或口径重复的
+        # 条目拼成一长串（曾出现“EIA原油库存、战略石油储备库存、8月库存量”）。
+        extras = [x for x in members[1:]
+                  if kind == "data" and x["tag"] and x["tag"] != head["tag"]][:1]
+        for other in extras:
             tail = other["title"]
             if prefix and tail.startswith(prefix):
                 tail = tail[len(prefix):]
+            elif region and tail.startswith(region):
+                tail = tail[len(region):]
             if tail and tail not in titles[0]:
                 titles.append(tail)
         text = "、".join(t for t in titles if t)
