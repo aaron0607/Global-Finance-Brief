@@ -27,7 +27,8 @@ from datetime import date
 from pathlib import Path
 
 from build_brief import validate_final_render
-from content_validation import emphasis_summary, validate_emphasis, validate_no_structure_leaks
+from content_validation import (calendar_summary, emphasis_summary, validate_calendar,
+                                validate_emphasis, validate_no_structure_leaks)
 
 BASE = Path(__file__).parent
 SSH = ["ssh", "-i", str(Path.home() / ".ssh/lct_cloud"), "ubuntu@115.159.56.153"]
@@ -75,6 +76,10 @@ def main():
     if emphasis_errors:
         sys.exit("✗ 发布前强调色校验失败：\n- " + "\n- ".join(emphasis_errors))
     print(f"发布前强调色校验 ✅ {emphasis_summary(content_json)}")
+    calendar_errors = validate_calendar(content_json)
+    if calendar_errors:
+        sys.exit("✗ 发布前本周财经日历校验失败：\n- " + "\n- ".join(calendar_errors))
+    print(f"发布前本周财经日历 ✅ {calendar_summary(content_json)}")
     final_qa_status = validate_final_render(content_json, html)
     print(f"发布前成稿终检 ✅ {final_qa_status}")
 

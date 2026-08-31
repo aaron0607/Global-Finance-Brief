@@ -34,7 +34,8 @@ import sys, os, re, json, datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from content_validation import emphasis_summary, validate_emphasis, validate_no_structure_leaks
+from content_validation import (calendar_summary, emphasis_summary, validate_calendar,
+                                validate_emphasis, validate_no_structure_leaks)
 
 # ---------- 颜色常量(A股惯例:涨红跌绿) ----------
 RED   = "#A32D2D"   # 涨/利多
@@ -751,6 +752,9 @@ def main():
     emphasis_errors = validate_emphasis(content)
     if emphasis_errors:
         sys.exit("✗ 强调色校验失败：\n- " + "\n- ".join(emphasis_errors))
+    calendar_errors = validate_calendar(content)
+    if calendar_errors:
+        sys.exit("✗ 本周财经日历校验失败：\n- " + "\n- ".join(calendar_errors))
     emphasis_status = emphasis_summary(content)
     client_copy_status = validate_client_facing_copy(content)
     freshness_status = validate_source_freshness(content)
@@ -772,6 +776,7 @@ def main():
     print("行情表来源: %s" % market_source)
     print("客户成稿校验: %s" % client_copy_status)
     print("强调色校验: %s" % emphasis_status)
+    print("本周财经日历: %s" % calendar_summary(content))
     print("成稿终检: %s" % final_qa_status)
     print("新闻时效窗口: %s" % freshness_status)
     print("QDII 数据来源: %s%s" % (label, " (data_date=%s)" % cache_date if cache_date else ""))

@@ -1,5 +1,5 @@
 {
-  "_note": "复制此模板为 content_YYYYMMDD.json，修改 date info / alert / logic_chain / calendar / sources / sections。main_title 须遵守 docs/title-style.md。禁止手写 indices / commodities / index_note。",
+  "_note": "复制此模板为 content_YYYYMMDD.json，修改 date info / alert / logic_chain / sources / sections。calendar 由 fetch_calendar.py 产出的 calendar_feed.json 确定性回填（日期写成“8月5日 周三”并带 date_iso），禁止凭记忆手写日期。main_title 须遵守 docs/title-style.md。禁止手写 indices / commodities / index_note。",
   "date_yyyymmdd": "20260805",
   "date_cn": "2026年8月X日（周X）",
   "as_of": "COPY_FROM_market_snapshot.json.run_started_at",
@@ -32,15 +32,31 @@
     "priority": "今日验证顺序：①关键数据发布 ②关键财报 ③地缘进展 ④技术面信号"
   },
   "calendar": [
-    {"date": "8月X日 周X", "event": "关键事件描述", "stars": 3},
-    {"date": "8月X日 周X", "event": "次要事件", "stars": 2}
+    {
+      "date": "8月5日 周三",
+      "date_iso": "2026-08-05",
+      "event": "20:30 美国7月非农就业人口、失业率",
+      "stars": 3
+    },
+    {
+      "date": "8月7日 周五",
+      "date_iso": "2026-08-07",
+      "event": "22:00 美国8月密歇根大学消费者信心指数初值",
+      "stars": 2
+    }
   ],
   "sources": [
     {
       "source": "金十数据全球财经早餐",
       "title": "金十数据全球财经早餐 | 2026年8月X日",
       "published_at": "2026-08-05T07:00:00+08:00",
-      "used_in": ["focus", "ai_tech", "iran", "macro", "commodity"]
+      "used_in": [
+        "focus",
+        "ai_tech",
+        "iran",
+        "macro",
+        "commodity"
+      ]
     }
   ],
   "sections": [

@@ -2,7 +2,7 @@
 # 每日财经简报服务器编排脚本（DeepSeek 写稿 + cron）
 #
 # 职责分工：
-#   Phase 1 采集（本脚本并行跑 fetch_market / fetch_news / fetch_views）
+#   Phase 1 采集（本脚本并行跑 fetch_market / fetch_news / fetch_calendar / fetch_views）
 #   Phase 2 写稿（write_brief.py 调 DeepSeek API 产出 content_YYYYMMDD.json，含结构/字数/强调色自动校验与重试）
 #   Phase 3 构建（build_brief.py 硬校验 + HTML 成稿终检）
 #   Phase 4 发布（publish_wechat.py，服务器上本机执行 node）
@@ -45,9 +45,11 @@ log "== 每日财经简报 ${DAY} 开始 =="
 log "Phase 1 采集启动"
 "$VENV_PY" "$PROJ_DIR/fetch_market.py" NVDA AMD AAPL MSFT TSLA META MU >>"$LOG" 2>&1 & MKT_PID=$!
 "$VENV_PY" "$PROJ_DIR/fetch_news.py" >>"$LOG" 2>&1 & NEWS_PID=$!
+"$VENV_PY" "$PROJ_DIR/fetch_calendar.py" >>"$LOG" 2>&1 & CAL_PID=$!
 "$VENV_PY" "$PROJ_DIR/fetch_views.py" >"$PROJ_DIR/views_feed.txt" 2>>"$LOG" & VIEWS_PID=$!
 wait "$MKT_PID";  MKT_RC=$?
 wait "$NEWS_PID"; NEWS_RC=$?
+wait "$CAL_PID";  CAL_RC=$?
 wait "$VIEWS_PID"; VIEWS_RC=$?
 
 # 行情是关键路径：失败只允许重试一次，仍失败即终止，禁止补写或沿用旧快照。
@@ -61,6 +63,15 @@ if [ "$MKT_RC" -ne 0 ]; then
 fi
 if [ "$NEWS_RC" -ne 0 ]; then
   log "✗ fetch_news 失败，终止"; notify "⚠️ 财经简报 ${DAY} 失败：新闻获取失败"; exit 1
+fi
+# 本周财经日历同样是关键路径：空表或错日期曾直接进成稿，重试一次仍失败即终止。
+if [ "$CAL_RC" -ne 0 ]; then
+  log "fetch_calendar 首次失败(rc=$CAL_RC)，重试一次"
+  "$VENV_PY" "$PROJ_DIR/fetch_calendar.py" >>"$LOG" 2>&1
+  CAL_RC=$?
+fi
+if [ "$CAL_RC" -ne 0 ]; then
+  log "✗ fetch_calendar 失败，终止"; notify "⚠️ 财经简报 ${DAY} 失败：本周财经日历获取失败"; exit 1
 fi
 if [ "$VIEWS_RC" -ne 0 ]; then
   log "⚠️ fetch_views 失败(rc=$VIEWS_RC)，飞书观点不可用，继续"

@@ -13,17 +13,20 @@ python3 -m venv .venv
 
 ## 快速使用
 
-三个采集命令可以在三个终端并行执行；`fetch_views.py` 的标准输出必须保存为 `views_feed.txt`，才能传入写稿器：
+四个采集命令可以并行执行；`fetch_views.py` 的标准输出必须保存为 `views_feed.txt`，才能传入写稿器：
 
 ```bash
 .venv/bin/python fetch_market.py NVDA AMD AAPL MSFT TSLA META MU
 .venv/bin/python fetch_views.py > views_feed.txt
 .venv/bin/python fetch_news.py
+.venv/bin/python fetch_calendar.py
 .venv/bin/python write_brief.py YYYYMMDD --views views_feed.txt   # DeepSeek 生成 content JSON
 .venv/bin/python build_brief.py content_YYYYMMDD.json
 ```
 
 `fetch_market.py` 是行情数据的唯一写入入口；`fetch_views.py` 用于读取最新投资观点，事件本身仍按媒体原意客观呈现。`fetch_news.py` 聚合 alphaear（财联社/华尔街见闻/雪球热榜）、Bloomberg/CNBC RSS、富途牛牛新闻搜索（futu-news-search）与华尔街见闻美股直播，并在配置 `JIN10_MCP_TOKEN` 时并入金十数据快讯，输出 `news_feed.json`。人工研究流程可用 `WebSearch(domain:reuters.com)` 补充 Reuters；服务器 cron 无实时 WebSearch，不含该补充链路。
+
+`fetch_calendar.py` 是「本周财经日历」的唯一写入入口，输出 `calendar_feed.json`：主源为金十数据日历（jin10 MCP `list_calendar`，本自然周经济数据带 1-5 星重要性，需 `JIN10_MCP_TOKEN`），兜底与跨周补充为东方财富财经日历（`RPT_CPH_FECALENDAR`，免鉴权，含会议/发布会等事件）。脚本剔除国债竞拍、周度库存分项与 ISM 分项等噪音，按重要性、地区权重和关键指标打分，合并同一时刻同地区的数据行，默认给出未来 7 天内最多 5 条。`write_brief.py` 用它确定性回填 `calendar`，模型不再决定日期；日历源不可用时写稿直接终止。
 
 生成的 `wechat_article_YYYYMMDD.html` 供人工审阅。确认后才运行：
 
@@ -34,6 +37,8 @@ python3 -m venv .venv
 发布命令会在公众号创建草稿；它不是本地测试步骤。
 
 `build_brief.py` 在 HTML 成稿后会执行独立终检：核对简报日期及文中所有完整日期的真实星期，并拦截“（周）”、`周X`、`X月X日`、`COPY_FROM` 等空值或模板占位符。`publish_wechat.py` 在调用微信接口前会再执行同一终检；任一层失败都禁止建稿或更新草稿。
+
+本周财经日历同样是构建与发布硬门禁：条目不得为空、1-6 条、日期写成「9月4日 周五」并与真实星期一致、不早于简报日期、不超出 10 天展望窗口且按日期升序；任一条不满足即拒绝生成 HTML 或建稿（历史样稿以 `20260901` 为启用分界，不追溯）。
 
 正文强调色同样是构建与发布硬门禁：alert 至少 2 处，每条 bullet 至少 1 处，`focus` / `ai_tech` 平均每条至少 2 处；单处最多 40 字。`[[red:...]]` 用于上涨、改善或利多，`[[green:...]]` 用于下跌、恶化或利空，`[[c:...]]` 用于关键事实、机构观点、结论和验证条件。写稿器会确定性圈选既有短语补齐遗漏的 `c` 色，不改变可见文字；写稿、构建、发布三个入口共用 `content_validation.py`，手工 JSON 也不能绕过。
 

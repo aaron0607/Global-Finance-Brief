@@ -29,7 +29,8 @@ from zoneinfo import ZoneInfo
 
 import requests
 
-from content_validation import ensure_emphasis, validate_emphasis, validate_no_structure_leaks
+from content_validation import (CALENDAR_REQUIRED_FROM, ensure_emphasis, validate_calendar,
+                                validate_emphasis, validate_no_structure_leaks)
 
 BASE = Path(__file__).parent
 BRIEF_TZ = ZoneInfo("Asia/Shanghai")
@@ -143,6 +144,56 @@ def build_news_pool(window_start: dt.datetime, window_end: dt.datetime) -> list[
     return pool
 
 
+CALENDAR_FEED_MAX_AGE_H = 12
+
+
+def load_calendar_feed() -> tuple[list[dict], list[str]]:
+    """读 fetch_calendar.py 产出的 calendar_feed.json。
+
+    日历条目由结构化日历源确定，模型不再决定日期；文件缺失/过期时返回空列表，
+    由调用方决定是告警还是终止。
+    """
+    path = BASE / "calendar_feed.json"
+    if not path.exists():
+        return [], ["缺 calendar_feed.json —— 先运行 fetch_calendar.py"]
+    try:
+        feed = json.loads(path.read_text(encoding="utf-8"))
+    except ValueError as exc:
+        return [], ["calendar_feed.json 解析失败：%s" % exc]
+    if feed.get("schema_version") != 1:
+        return [], ["calendar_feed.json 版本不符，需重新运行 fetch_calendar.py"]
+    fetched_at = parse_iso(feed.get("fetched_at"))
+    if not fetched_at:
+        return [], ["calendar_feed.json 缺 fetched_at"]
+    age_h = (now_bjt() - fetched_at).total_seconds() / 3600
+    if age_h > CALENDAR_FEED_MAX_AGE_H:
+        return [], ["calendar_feed.json 已过期(%.1f 小时前) —— 重新运行 fetch_calendar.py" % age_h]
+    events = [e for e in feed.get("events", []) if isinstance(e, dict) and e.get("date") and e.get("event")]
+    return events, []
+
+
+def format_calendar_feed(events: list[dict]) -> str:
+    lines = []
+    for event in events:
+        lines.append("- %s %s %s（重要性 %s）" % (
+            event.get("date", ""), event.get("time", ""), event.get("event", ""),
+            "⭐" * int(event.get("stars", 1) or 1)))
+    return "\n".join(lines)
+
+
+def apply_calendar_feed(content: dict, events: list[dict]) -> list[str]:
+    """用确定性日历覆盖模型输出的 calendar，杜绝空表与编造日期。"""
+    if not events:
+        return []
+    content["calendar"] = [{
+        "date": event["date"],
+        "date_iso": event.get("date_iso", ""),
+        "event": event["event"],
+        "stars": int(event.get("stars", 1) or 1),
+    } for event in events]
+    return ["本周财经日历由 calendar_feed.json 确定性回填 %d 条" % len(events)]
+
+
 def format_market(snap: dict) -> str:
     lines = [snap.get("index_date_label", ""), snap.get("index_price_label", "")]
     lines.append("指数:")
@@ -156,7 +207,7 @@ def format_market(snap: dict) -> str:
 
 def build_prompt(snap: dict, pool: list[dict], day: str, date_cn: str, alert_time: str,
                  as_of: str, index_note: str, qdii_label: str, views_text: str,
-                 feedback: str | None = None) -> str:
+                 feedback: str | None = None, calendar_events: list[dict] | None = None) -> str:
     sections_hint = (
         "固定板块顺序：focus(头号焦点)、ai_tech(AI·芯片·科技，核心板块)、"
         "stock_rotation(资金轮动)、iran(中东地缘，仅当有实质进展时)、macro(宏观·利率)、"
@@ -179,6 +230,9 @@ def build_prompt(snap: dict, pool: list[dict], day: str, date_cn: str, alert_tim
                    "**只用于解读/点评的方向对齐，绝不是新闻事实来源，严禁直接引用其标题、措辞、数字或事件表述**）\n"
                    + views_text.strip()) if views_text.strip() else ""
     feedback_block = ("\n【上一次反馈】\n" + feedback + "\n必须针对该反馈修正后重新完整输出。") if feedback else ""
+    calendar_block = ("\n【本周财经日历】（结构化日历源，日期与时间以此为准；"
+                      "正文提到未来数据/事件时只能引用这里的日期，calendar 字段由脚本回填）\n"
+                      + format_calendar_feed(calendar_events)) if calendar_events else ""
     return f"""你是一名财经简报主笔。请根据下面提供的【行情数据】【新闻池】【你的观点参考】【结构要求】写一份当天的全球财经简报，并把结果输出为**一个完整的 JSON 对象**（不要输出任何额外文字、解释或 markdown 代码块）。
 
 【关键约束】
@@ -194,7 +248,7 @@ def build_prompt(snap: dict, pool: list[dict], day: str, date_cn: str, alert_tim
    - **禁止写法**：不用问句、感叹号、口号、隐喻、悬念或标题党；不得使用“蓄势/主线浮现/机会浮现/布局良机/买点/看多/看空/利好/利空/受益方向/静待方向/静待突破/变盘在即/风云再起/谁主沉浮/狂欢开启”等观点、预测或情绪词；不得出现来源转述、内部取数机制或飞书文章标题/改写。
    - **格式**：最多两行，用 `<br>` 分隔，每行最多 **24 个字符**（数字和标点均计数）；不要为了短而删除关键主体、数字或第二条定价主线。
    - **正反例**：合格“存储飙涨领衔·全球科技反弹<br>油价上行·黄金守住关键位”“英伟达扩建算力·费半反弹<br>美债收益率回落·布油上涨”；不合格“科技回调黄金蓄势”（观点+模糊预测）“AI主线机会浮现”（投资结论）“油金谁主沉浮？”（悬念问句）。
-   alert 为"**过去24小时核心变化**：..."开头的短导读，控制在 180-240 字，只交代科技/市场、宏观/地缘和一句交易结构，禁止把正文再复述一遍；alert 必须有至少 2 处强调色。logic_chain 含 paths 三项：路径A写当天科技/产业主线，路径B写宏观或利率逆风，路径C写地缘/黄金/其他独立变量；每项含 name/color/body/sub，body 用 <br> 分隔短句，名称必须随当天事实变化；**三路径 color 固定为：路径A=#534AB7(紫) 路径B=#A32D2D(红) 路径C=#0F6E56(绿)**。calendar 为 1-3 条 {{date/event/stars}}。
+   alert 为"**过去24小时核心变化**：..."开头的短导读，控制在 180-240 字，只交代科技/市场、宏观/地缘和一句交易结构，禁止把正文再复述一遍；alert 必须有至少 2 处强调色。logic_chain 含 paths 三项：路径A写当天科技/产业主线，路径B写宏观或利率逆风，路径C写地缘/黄金/其他独立变量；每项含 name/color/body/sub，body 用 <br> 分隔短句，名称必须随当天事实变化；**三路径 color 固定为：路径A=#534AB7(紫) 路径B=#A32D2D(红) 路径C=#0F6E56(绿)**。calendar 字段输出空数组 []，本周财经日历由脚本按结构化日历源确定性回填；正文若要提到未来事件，日期必须与【本周财经日历】一致。
 7. **板块结构（schema 必须严格遵守）**：{sections_hint}
    板块内容规范：
    - `focus`：3 条完整论证段，依次完成 ①核心事实与盘面 ②跨市场/产业交叉验证 ③课代表框架、反方信号与验证条件；无 iran 时可增至 4 条。
@@ -208,7 +262,7 @@ def build_prompt(snap: dict, pool: list[dict], day: str, date_cn: str, alert_tim
    - AI 上游=超级产业周期（设备/材料/存储/CPO/PCB/电力冷却等"卖铲子"环节是主线），科技回调=交易层面（拥挤度/涨太高）而非基本面逆转；下游应用/老登板块反弹=日线级高切低，难成主线。
    - 黄金由利率预期主导：地缘经"油价→通胀→利率"链条影响黄金（霍尔木兹关闭→油↑→通胀↑→加息预期→实际利率↑→黄金承压；开放→黄金受益），**禁止写"封锁海峡→黄金上行触发器"**这类链条。
    - 美联储路径：中性=年内不降息、乐观=降1次、悲观=加1次；油价回落→CPI降温→加息预期修正。
-10. **时效铁律**：以最近 12 小时为主体、24 小时为上限；**已公布数据（CPI/PPI/NFP 等）不得作为头条/alert 的"最新"事件**，只能作背景引用或列入 calendar 的待发布项；宏观板块须以当日最新角度开篇（利率定价/官员表态/当日数据/前瞻窗口）。**calendar 日期必须有新闻依据（防编造）**：calendar 每条的事件与日期必须能在【新闻池】原文中找到依据（如"今晚非农""英伟达将于8月26日公布财报"）；日期**严禁凭训练记忆填写**——个股财报/经济数据公布日若新闻池未明确写出日期，就不要写入该条。宁可条目少，不可日期错。
+10. **时效铁律**：以最近 12 小时为主体、24 小时为上限；**已公布数据（CPI/PPI/NFP 等）不得作为头条/alert 的"最新"事件**，只能作背景引用或列入 calendar 的待发布项；宏观板块须以当日最新角度开篇（利率定价/官员表态/当日数据/前瞻窗口）。**未来日期严禁凭记忆填写**：正文提到的未来数据/事件日期只能来自【本周财经日历】或【新闻池】原文；calendar 字段留空数组，由脚本用结构化日历源回填。
 11. **头号焦点优先级**：AI大模型发布/重大突破 > 芯片/半导体重大事件 > 科技巨头财报 > CEO重磅发言 > 宏观政策 > 地缘（仅战争升级/停火/制裁重大变化级别）。
 12. 字数（最重要）：渲染后正文目标 **{TARGET_MIN}-{TARGET_MAX} 字**，硬范围 {HARD_MIN}-{HARD_MAX}。不要靠增加碎段凑字。**focus 每段 280-360 字，ai_tech 每段 270-350 字，stock_rotation/iran/macro 每段 230-310 字，commodity 两段各 250-320 字**；这里指去掉 `[[c:]]`、`[[red:]]`、`[[green:]]` 和 `**` 后读者实际看到的字数。每段通常 3-5 句，内部顺序为“事实与数字→市场反应/交叉验证→传导逻辑→风险或验证条件”。alert 可见正文 180-240 字，logic_chain 合计 450-650 字，note 40-90 字。无 iran 时，把缺口集中补进 focus 与 ai_tech 的新增论证段。
 13. **编辑感铁律**：板块标题必须写出本节核心矛盾或结论，格式为“板块名 | 结论/反差”，不能只是罗列新闻名词；段落之间用事实推进。同一事实只在最相关板块完整展开，其他板块只写其新增含义，禁止重复背景、万能结论和“短线波动不改长期趋势”式套话。
@@ -226,6 +280,7 @@ def build_prompt(snap: dict, pool: list[dict], day: str, date_cn: str, alert_tim
 
 【新闻池】（共 {len(pool)} 条，均落在 {snap["news_window"]["start"]} 至 {snap["news_window"]["end"]} 窗口内）
 {news_block}
+{calendar_block}
 {views_block}
 {feedback_block}"""
 
@@ -246,7 +301,7 @@ def build_repair_prompt(content: dict, feedback: str, pool: list[dict], day: str
 2. 若反馈指出某个 alert/bullet/note 低于最低字数，必须保留该字段现有文字不动，只在末尾追加 1-3 句已有事实的传导含义、反方风险或验证条件，写到最低值以上再额外留 10-20 字余量；禁止同义改写后长度不变，也禁止缩短其他合格字段。不得编造新事实、新数字或机构观点。
 3. 字数超限时，按反馈中的分段字数优先压缩最大板块，删除重复解读，保留事实、关键数字和结论。
 4. sections 顺序必须是 focus、ai_tech、stock_rotation、iran（仅有实质进展时）、macro、commodity。目标为 focus 3 条、ai_tech 4 条、stock_rotation 2 条、iran 3 条、macro 3 条、commodity 2 条；无 iran 时 focus/ai_tech 可各增加 1 条，重大信号充足时 stock_rotation/macro 可各增加 1 条。每个板块必须有 id/title/bullets/note。
-5. logic_chain 必须有 paths 三项和非空 priority，每条路径必须有 name/color/body/sub；priority 必须是单个字符串，不能是数组。calendar 只保留新闻池明确支持的日期。
+5. logic_chain 必须有 paths 三项和非空 priority，每条路径必须有 name/color/body/sub；priority 必须是单个字符串，不能是数组。calendar 由脚本确定性回填，保持原样不要改动。
 6. sections+alert+logic_chain+calendar 最终必须在 {HARD_MIN}-{HARD_MAX} 字，优先收敛到 {TARGET_MIN}-{TARGET_MAX} 字。
 7. 正文事实只能来自下方新闻池或上一版已有内容；禁止出现“据XX报道”“据报道”“有报道称”、“新闻池”、“行情快照”、“脚本”等客户不可见表述。
 8. 以下标识必须原样使用：date_yyyymmdd={day}；date_cn={date_cn}；as_of={as_of}；alert_time={alert_time}；index_note={index_note}；qdii_date_label={qdii_label}。禁止输出 indices/commodities。
@@ -517,7 +572,8 @@ def sanitize_calendar(content: dict, pool: list[dict], as_of: str) -> list[str]:
 
 
 def post_process(content: dict, snap: dict, pool: list[dict], day: str, date_cn: str,
-                 alert_time: str, as_of: str, index_note: str, qdii_label: str) -> list[str]:
+                 alert_time: str, as_of: str, index_note: str, qdii_label: str,
+                 calendar_events: list[dict] | None = None) -> list[str]:
     """统一修正日期标识、来源时效，禁止手写 indices/commodities。返回警告。"""
     warnings = []
     sanitize_content(content)
@@ -559,7 +615,11 @@ def post_process(content: dict, snap: dict, pool: list[dict], day: str, date_cn:
     if emphasis_added:
         warnings.append("已在不改正文文字的前提下确定性补齐 %d 处强调色" % emphasis_added)
     auto_sources(content, pool, section_ids)
-    warnings += sanitize_calendar(content, pool, as_of)
+    if calendar_events:
+        warnings += apply_calendar_feed(content, calendar_events)
+    else:
+        # 兜底：日历源不可用时退回旧的新闻池溯源清洗，宁可少、不可错。
+        warnings += sanitize_calendar(content, pool, as_of)
     return warnings
 
 
@@ -776,6 +836,7 @@ def validate_required(content: dict, day: str) -> list[str]:
             errors.append("logic_chain.priority 应为非空字符串")
     if not isinstance(content.get("calendar"), list):
         errors.append("calendar 应为数组")
+    errors.extend(validate_calendar(content))
     errors.extend(validate_emphasis(content))
     return errors
 
@@ -838,6 +899,14 @@ def main() -> int:
     pool = build_news_pool(window_start, window_end)
     print("新闻池：%d 条（窗口 %s 至 %s）" % (len(pool), snap["news_window"]["start"], snap["news_window"]["end"]))
 
+    calendar_events, calendar_warnings = load_calendar_feed()
+    for warning in calendar_warnings:
+        print("⚠️ 财经日历：%s" % warning, file=sys.stderr)
+    if calendar_events:
+        print("本周财经日历：%d 条（确定性来源）" % len(calendar_events))
+    elif day >= CALENDAR_REQUIRED_FROM:
+        sys.exit("✗ 本周财经日历不可用，禁止写稿 —— 先运行 fetch_calendar.py")
+
     # 飞书观点先提炼为纯"方向立场清单"，防止其标题/措辞/素材被当作简报内容引用
     views_for_prompt = ""
     if views_text.strip():
@@ -860,7 +929,7 @@ def main() -> int:
         print("写稿尝试 %d/%d（%s）..." % (attempt, MAX_ATTEMPTS, action), file=sys.stderr)
         if candidate is None:
             prompt = build_prompt(snap, pool, day, date_cn, alert_time, as_of, index_note,
-                                  qdii_label, views_for_prompt, feedback)
+                                  qdii_label, views_for_prompt, feedback, calendar_events)
         else:
             prompt = build_repair_prompt(
                 candidate, feedback or "请修复并通过全部校验。", pool,
@@ -879,7 +948,8 @@ def main() -> int:
             print("  解析失败，重试", file=sys.stderr)
             continue
         parsed_any = True
-        warnings = post_process(content, snap, pool, day, date_cn, alert_time, as_of, index_note, qdii_label)
+        warnings = post_process(content, snap, pool, day, date_cn, alert_time, as_of, index_note,
+                                qdii_label, calendar_events)
         candidate = content
         errors = validate_required(content, day)
         if errors:

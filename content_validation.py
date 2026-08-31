@@ -1,10 +1,19 @@
 #!/usr/bin/env python3
 """内容层共享校验：供写稿、构建和发布入口共同调用。"""
 
+import datetime
 import re
 
 
 EMPHASIS_REQUIRED_FROM = "20260826"
+# 财经日历改由 fetch_calendar.py 确定性回填后启用硬校验（历史样稿不追溯）。
+CALENDAR_REQUIRED_FROM = "20260901"
+CALENDAR_DATE_RE = re.compile(r"^(\d{1,2})月(\d{1,2})日\s*周([一二三四五六日])$")
+CALENDAR_WEEKDAYS = "一二三四五六日"
+CALENDAR_MIN_ROWS = 1
+CALENDAR_MAX_ROWS = 6
+CALENDAR_FORWARD_DAYS = 10
+CALENDAR_EVENT_MAX = 60
 COLOR_MARKER_RE = re.compile(r"\[\[(?:red|green|c):(.+?)\]\]")
 COLOR_SPAN_MAX = 40
 CORE_SECTIONS = {"focus", "ai_tech"}
@@ -167,3 +176,93 @@ def emphasis_summary(content: dict) -> str:
     total = alert_count + sum(len(COLOR_MARKER_RE.findall(bullet)) for bullet in bullets)
     colored = sum(bool(COLOR_MARKER_RE.search(bullet)) for bullet in bullets)
     return "强调色 %d 处，正文覆盖 %d/%d 条" % (total, colored, len(bullets))
+
+
+def _calendar_entry_date(entry: dict, brief_date: datetime.date) -> tuple[datetime.date | None, str]:
+    """解析日历条目日期：优先 date_iso，其次由“X月X日 周X”推年（跨年顺延）。"""
+    iso = str(entry.get("date_iso") or "").strip()
+    label = str(entry.get("date") or "").strip()
+    matched = CALENDAR_DATE_RE.match(label)
+    if not matched:
+        return None, "日期必须写成“9月4日 周五”，实际为《%s》" % label
+    month, day, weekday = int(matched.group(1)), int(matched.group(2)), matched.group(3)
+    value = None
+    if iso:
+        try:
+            value = datetime.date.fromisoformat(iso)
+        except ValueError:
+            return None, "date_iso 无效：%s" % iso
+        if (value.month, value.day) != (month, day):
+            return None, "date_iso %s 与日期《%s》不一致" % (iso, label)
+    else:
+        for year in (brief_date.year, brief_date.year + 1):
+            try:
+                candidate = datetime.date(year, month, day)
+            except ValueError:
+                return None, "日期不存在：%s" % label
+            if candidate >= brief_date:
+                value = candidate
+                break
+        if value is None:
+            return None, "日期不存在：%s" % label
+    if CALENDAR_WEEKDAYS[value.weekday()] != weekday:
+        return None, "日期星期错配：%s 实际为周%s" % (label, CALENDAR_WEEKDAYS[value.weekday()])
+    return value, ""
+
+
+def validate_calendar(content: dict) -> list[str]:
+    """本周财经日历硬校验：非空、格式统一、星期与真实日历一致、在展望窗口内且升序。
+
+    日历此前由模型自由生成，出现过整表为空和把下周非农写成当天（2026-08-29~08-31）。
+    条目现由 fetch_calendar.py 确定性回填，这里做最后一道拦截。
+    """
+    date_key = str(content.get("date_yyyymmdd", ""))
+    if date_key < CALENDAR_REQUIRED_FROM:
+        return []
+    try:
+        brief_date = datetime.datetime.strptime(date_key, "%Y%m%d").date()
+    except ValueError:
+        return ["date_yyyymmdd 无法解析，无法校验财经日历：%s" % date_key]
+
+    rows = content.get("calendar")
+    if not isinstance(rows, list):
+        return ["calendar 必须是数组"]
+    if len(rows) < CALENDAR_MIN_ROWS:
+        return ["本周财经日历为空 —— 先运行 fetch_calendar.py 生成 calendar_feed.json"]
+    if len(rows) > CALENDAR_MAX_ROWS:
+        return ["本周财经日历最多 %d 条，实际 %d 条" % (CALENDAR_MAX_ROWS, len(rows))]
+
+    errors = []
+    previous = None
+    for index, entry in enumerate(rows, 1):
+        if not isinstance(entry, dict):
+            errors.append("calendar[%d] 必须是对象" % index)
+            continue
+        event = entry.get("event")
+        if not isinstance(event, str) or not event.strip():
+            errors.append("calendar[%d] 缺少事件描述" % index)
+        elif len(event) > CALENDAR_EVENT_MAX:
+            errors.append("calendar[%d] 事件描述超过 %d 字" % (index, CALENDAR_EVENT_MAX))
+        stars = entry.get("stars")
+        if not isinstance(stars, int) or isinstance(stars, bool) or not 1 <= stars <= 5:
+            errors.append("calendar[%d] stars 必须是 1-5 的整数" % index)
+        value, problem = _calendar_entry_date(entry, brief_date)
+        if problem:
+            errors.append("calendar[%d] %s" % (index, problem))
+            continue
+        if value < brief_date:
+            errors.append("calendar[%d] %s 早于简报日期，禁止回填过期事件" % (index, entry.get("date")))
+        elif (value - brief_date).days > CALENDAR_FORWARD_DAYS:
+            errors.append("calendar[%d] %s 超出 %d 天展望窗口" % (
+                index, entry.get("date"), CALENDAR_FORWARD_DAYS))
+        if previous and value < previous:
+            errors.append("calendar[%d] %s 未按日期升序排列" % (index, entry.get("date")))
+        previous = value
+    return errors
+
+
+def calendar_summary(content: dict) -> str:
+    rows = content.get("calendar")
+    if not isinstance(rows, list) or not rows:
+        return "无条目"
+    return "%d 条（%s 起）" % (len(rows), rows[0].get("date", "?"))

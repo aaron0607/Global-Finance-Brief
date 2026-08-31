@@ -10,17 +10,20 @@
 2. 阅读本文件全文（含下方日常流程、内容规则、数据边界）
 3. 阅读 `content_template.json`（含 JSON 结构范例和板块 bullet 数量约束）
 4. 确认 `market_snapshot.json` 是否已存在且不超过 2 小时（超过则重新 fetch）
+5. 确认 `calendar_feed.json` 是否已存在且不超过 12 小时（超过则重新运行 `fetch_calendar.py`）
 
 ## 日常流程
 
-1. 任务启动后立即并行运行三个采集脚本（彼此无依赖，可同时执行）：
+1. 任务启动后立即并行运行四个采集脚本（彼此无依赖，可同时执行）：
 
    ```bash
    .venv/bin/python fetch_market.py NVDA AMD AAPL MSFT TSLA META MU  # 行情快照
    .venv/bin/python fetch_views.py > views_feed.txt                  # 最近 3 篇飞书观点
    .venv/bin/python fetch_news.py           # alphaear + Bloomberg/CNBC RSS + Futu → news_feed.json
+   .venv/bin/python fetch_calendar.py       # 金十日历 + 东方财富日历 → calendar_feed.json
    ```
 
+   `fetch_calendar.py` 产出「本周财经日历」候选（见「财经日历数据源」），日历日期一律以它为准，**禁止**凭记忆或新闻推断填写。
    脚本 `fetch_market.py` 会在真正开始时固化北京时间 `run_started_at`，并更新本目录的 `market_snapshot.json`；行情数据源为国内可直连固定链接（见"行情数据源"），不依赖 VPN。`fetch_news.py` 聚合 alphaear（财联社/华尔街见闻/雪球热榜）、Bloomberg/CNBC RSS 和富途牛牛新闻搜索（futu-news-search，公共 HTTP 接口，无需 OpenD 或鉴权）。
 2. 采集新闻与观点；行情数值只采用第一步结果。`08:20` 只是定时任务的计划触发时刻，不是内容截止点。以 `market_snapshot.json.run_started_at` 为本次统一 `as_of`，只允许使用 `[as_of-24小时, as_of]` 内发布或更新的新闻。
    - 不得连接、搜索或读取 Gmail 及任何邮件来源；邮件通讯不进入候选池。
@@ -29,7 +32,7 @@
    - 搜索全流程最多 5 组（AI/科技与宏观必查，地缘仅有实质进展时查，焦点深挖最多 2 组），同一主题不得换关键词重复搜索。
    - 这 5 组搜索应**一次性并行发出**，不要串行等待。第一阶段搜完筛选后，用一个并行批次拉取 5-8 篇关键文章原文核验。
    - 常规简报不得使用代理继续派生代理。
-3. 仅编辑 `content_YYYYMMDD.json`；不要手改生成的 HTML。JSON 顶层的 `as_of` 必须原样复制 `market_snapshot.json.run_started_at`，且禁止手写 `indices` / `commodities`。从 `20260727` 起必须在 JSON 顶层维护 `sources`，每项包含 `source`、`title`、带时区的 ISO 8601 `published_at`、以及板块 id 数组 `used_in`；每个正文板块至少映射一个有效来源。
+3. 仅编辑 `content_YYYYMMDD.json`；不要手改生成的 HTML。`calendar` 字段直接照抄 `calendar_feed.json` 的 `events`（`date` / `date_iso` / `event` / `stars`），不得增删日期或改写时间。JSON 顶层的 `as_of` 必须原样复制 `market_snapshot.json.run_started_at`，且禁止手写 `indices` / `commodities`。从 `20260727` 起必须在 JSON 顶层维护 `sources`，每项包含 `source`、`title`、带时区的 ISO 8601 `published_at`、以及板块 id 数组 `used_in`；每个正文板块至少映射一个有效来源。
    - **构造 JSON 必须使用 Python `json.dump()`**，不要手写 JSON 字符串——中文弯引号 `””` 与 JSON 半角引号 `””` 视觉相似但解析不兼容，手写极易浪费多轮重试。
    - 可复制 `content_template.json` 作为起点，修改 date/meta/content 后一次生成。
    - 固定板块：focus、ai_tech、stock_rotation、iran（可选，仅实质进展时）、macro、commodity。
@@ -52,7 +55,7 @@
 - **事实与解读分离**：新闻事实（谁、发生了什么、官方数据、公司财报数字）严格按新闻原文客观呈现，原样引用数字，不套用主观立场；若观点本身就来自新闻（机构/官方表态），照写不改。
 - **解读必须对齐用户观点（仅方向）**：所有投资解读/观点部分（课代表点评、逻辑判断、路径分析、风险提示，以及对黄金/AI·半导体/地缘/美联储/资金轮动的方向判断）必须对齐飞书「股市马斯克文章发表」**最近 3 篇文章**（最新一篇最权威，观点以最新为准）的多空方向。**飞书文章只提供方向观点，绝不是素材**：`write_brief.py` 先把飞书原文提炼成纯"立场清单"（只保留各主题多空方向与要点，剥离标题、措辞、数字、事件细节），再喂给写稿模型；**严禁**引用飞书标题、措辞、价格/持仓数字或事件表述作为正文内容。
 - **新闻内容来源红线**：正文所有新闻事实、数据、事件、人物言论、公司财报数字只能来自 `news_feed.json`（新闻池）与 `market_snapshot.json`（行情），飞书观点绝不进入新闻事实部分。**正文严禁出现"据XX报道""据报道""有报道称""据报""据XX称"等来源转述/出处表述**——事实直接客观陈述，不标注、不转述新闻来源；来源登记只存在 JSON `sources` 字段（脚本自动挂接），不进入成稿正文。
-- **calendar 日期必须有新闻依据（防编造）**：财经日历每条的事件与日期必须能在 `news_feed.json` 原文中找到依据；严禁凭模型记忆填写个股财报或经济数据日期。`write_brief.py` 的 `sanitize_calendar()` 会删除无法溯源到具体日期的条目（“今晚/今日”类以 as_of 为准），并按日期升序排列。宁可少、不可错。
+- **本周财经日历必须来自确定性日历源（防空表与错日期）**：`calendar` 由 `fetch_calendar.py` 产出的 `calendar_feed.json` 回填，模型/人工都不得自行决定日期。日期列固定写成「9月4日 周五」并附 `date_iso`；条目 1-6 条、按日期升序、不得早于简报日期、不得超出 10 天展望窗口。`content_validation.validate_calendar()` 在写稿、构建、发布三个入口硬拦截（空表、星期错配、过期或越界日期、乱序一律失败）。日历源全部不可用时才退回 `sanitize_calendar()` 的新闻池溯源清洗，宁可少、不可错。
 - **标题必须是高信息密度新闻播报**：优先两行；第一行写主事件及直接市场反应，第二行写另一条足以影响定价的科技、宏观、地缘或大宗副线。每行可放 1-2 个紧密相关的事实信号、最多 24 字；事实、数字、方向和因果须可溯源。禁止投资观点、预测、问句/感叹号、标题党、来源转述、内部口径和飞书标题/改写。模型标题不合规时只单独修复标题，不得因此丢弃并重写整篇；单独修复仍失败时由行情快照生成合规兜底标题。详见 [`docs/title-style.md`](docs/title-style.md)。
 - **正文编辑感**：板块标题必须写出核心矛盾或结论，不能只罗列新闻名词。全文采用约 17 个少而完整的论证段，每段按“事实与数字→市场反应/交叉验证→传导逻辑→风险或验证条件”推进；不要机械地给每段加粗体小标题，不重复背景，不用万能结论凑字。导读控制在 180-240 字，note 控制在 40-90 字。
 - **逻辑框架**：三条路径名称随当天事实变化，依次为科技/产业主线（紫 `#534AB7`）、宏观/利率逆风（红 `#A32D2D`）、地缘/黄金/其他独立变量（绿 `#0F6E56`），禁止固定套用“乐观/悲观/备选情景”。
@@ -66,7 +69,7 @@
 - 修改渲染器时，微信彩框必须使用 `<section>` 与 `background-color`；不要改成 `<div>`/`<p>` 彩框或 `background` 简写。
 - 每次修改流程或脚本，在本目录 `CHANGELOG.md` 顶部记录原因和影响；git 提交信息可以简短，不替代 `CHANGELOG.md` 里的原因与影响说明。
 - 本项目使用本地 Git 仓库做版本管理，范围限于代码、规则与模板：`*.py`、`AGENTS.md`、`README.md`、`CHANGELOG.md`、`content_template.json`、`docs/`、`wechat_fragments/`、`requirements.txt`、`run_brief.sh`。
-  - 每日抓取/生成的运行数据与产出物（`content_YYYYMMDD.json`、`wechat_article_YYYYMMDD.html`、`market_snapshot.json`、`news_feed.json`、`views_feed.json`、`qdii_cache.json`）、`.venv/`、`__pycache__/`、`backups/`、`.secrets.env`、`.claude/settings.local.json` 由 `.gitignore` 排除，不纳入版本管理——这些要么可重新生成，要么已用文件名日期自成历史，要么含机器本地路径或密钥。
+  - 每日抓取/生成的运行数据与产出物（`content_YYYYMMDD.json`、`wechat_article_YYYYMMDD.html`、`market_snapshot.json`、`news_feed.json`、`calendar_feed.json`、`views_feed.json`、`qdii_cache.json`）、`.venv/`、`__pycache__/`、`backups/`、`.secrets.env`、`.claude/settings.local.json` 由 `.gitignore` 排除，不纳入版本管理——这些要么可重新生成，要么已用文件名日期自成历史，要么含机器本地路径或密钥。
   - 提交前用 `git status` 确认暂存内容，不要用 `git add -A`/`git add .` 整批加入，避免误提交上述排除范围。
   - 本地仓库当前无远程；如需推送到服务器或建立远程仓库，需先与用户确认。
 
@@ -78,6 +81,9 @@
 | `未知板块` | sources[].used_in 中的 id 与 sections[].id 不匹配 | 检查 used_in 数组中板块名是否与 sections id 完全一致 |
 | `qdii_date_label KeyError` | 缺少 qdii_date_label 字段 | 添加该字段，格式参考 template |
 | `行情快照已过期` | market_snapshot.json 超过 2 小时 | 重新运行 fetch_market.py |
+| `本周财经日历为空` | 没跑 fetch_calendar.py 或日历源全挂 | 重新运行 fetch_calendar.py，确认 `calendar_feed.json` 有 events |
+| `日期星期错配` / `早于简报日期` | 手改了 calendar 日期 | 照抄 calendar_feed.json，不要手写日期 |
+| `calendar_feed.json 已过期` | 距抓取超过 12 小时 | 重新运行 fetch_calendar.py |
 | `content.as_of 与行情快照不匹配` | as_of 与 market_snapshot.run_started_at 不一致 | 原样复制 run_started_at |
 | `正文字符数超限` | 超 7000 字 | 看分段统计，找最大的 2-3 个板块各砍半条 bullet |
 | `正文字符数偏少` | 不足 6000 字 | 优先在 ai_tech 或 focus 加一条完整 bullet |
@@ -94,6 +100,14 @@
 
 为避免多个项目共用 `/tmp` 导致旧行情串入，行情快照固定保存在本目录；QDII 缓存采用云端优先、项目内缓存兜底。周末和休市日仍使用当天的内容与草稿文件名；开市标的取本次最新报价，休市标的由本次快照给出最近交易值及休市状态，不得沿用旧快照或旧日期。
 
+## 财经日历数据源
+
+- `fetch_calendar.py` 是「本周财经日历」的唯一写入入口，输出 `calendar_feed.json`（默认窗口 `as_of` 起 7 个自然日，最多 5 条）。
+- 主源：**金十数据日历**（jin10 远程 MCP `list_calendar`，本自然周经济数据 + 1-5 星重要性），需 `JIN10_MCP_TOKEN`。
+- 兜底与跨周补充：**东方财富财经日历**（`RPT_CPH_FECALENDAR`，无需鉴权），提供未来 7 天的会议/发布会等事件，并在金十不可用时替代经济数据。
+- 筛选口径：剔除国债竞拍、周度库存分项、ISM 分项等管道类噪音；按「重要性星级 + 地区权重（美国 > 欧元区/中国 > 其他）+ 关键指标标签」打分；同一时刻同地区的数据合并为一行（如非农、失业率、时薪）；不足 3 条时逐级放宽阈值。
+- 事件文案自带北京时间前缀（如 `20:30 美国8月非农就业人数、失业率`），日期列由脚本按真实日历生成星期，不由模型书写。
+
 ## 行情数据源
 
 - `fetch_market.py` 是行情唯一写入入口，不依赖 Yahoo/yfinance；当前新浪、东方财富和 CBOE 的逐项映射及新鲜度口径见 `README.md`「行情口径」。
@@ -103,6 +117,6 @@
 
 - 唯一生产任务在服务器 `115.159.56.153`，北京时间每日 08:20 由 cron 触发 `run_brief.sh`；本机调度保持停用，禁止形成两个发布者。完整操作说明见 `README.md` 与脚本头部。
 - 服务器 `.secrets.env`（chmod 600）必填 `DEEPSEEK_API_KEY`；`JIN10_MCP_TOKEN`、`LARK_APP_ID`、`LARK_APP_SECRET` 按数据源需要选配。cron 重定向前必须先创建 `logs/`。
-- `fetch_views.py` 失败属于非致命告警；行情或新闻失败、结构/字数校验失败、构建失败均必须终止。DeepSeek 自动稿没有实时 WebSearch，发布前建议复核关键数字。
+- `fetch_views.py` 失败属于非致命告警；行情、新闻或财经日历失败（`fetch_calendar.py` 重试一次仍失败）、结构/字数校验失败、构建失败均必须终止。DeepSeek 自动稿没有实时 WebSearch，发布前建议复核关键数字。
 - 本机工作副本是唯一权威修改处；脚本、规则或文档变更必须测试后同步服务器，禁止直接在服务器形成长期分叉。
 - 同步方式：本机仓库已配置 `production` remote（`ssh://ubuntu@115.159.56.153/home/ubuntu/finance-brief.git`，走裸仓库 `post-receive` hook 自动 `checkout -f` 到 `/home/ubuntu/finance-brief`），改完代码/规则后本机执行 `git push production main` 即可单向同步；服务器不会反向推送，每日抓取生成的运行数据不受影响。`core.sshCommand` 已在本地仓库配置指向 `~/.ssh/lct_cloud`，无需每次手动指定密钥。

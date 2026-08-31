@@ -244,7 +244,7 @@ def fetch_futu(keywords: Optional[list[str]] = None, size: int = 10) -> list[dic
             print(f"[warn] futu/{kw}: {exc}", file=sys.stderr)
 
 
-def _jin10_call(tool: str, arguments: dict, timeout: int = 20) -> Optional[dict]:
+def jin10_call(tool: str, arguments: dict, timeout: int = 20) -> Optional[dict]:
     """最小 MCP HTTP 客户端：initialize → notifications/initialized → tools/call。
     返回工具返回的 JSON dict；失败返回 None。"""
     if not JIN10_MCP_TOKEN:
@@ -301,7 +301,7 @@ def fetch_jin10(flash_limit: int = 30, news_limit: int = 15) -> list[dict]:
     if not JIN10_MCP_TOKEN:
         print("[warn] 未配置 JIN10_MCP_TOKEN，跳过金十", file=sys.stderr)
         return items
-    flash = _jin10_call("list_flash", {})
+    flash = jin10_call("list_flash", {})
     if flash:
         for item in (flash.get("data", {}).get("items") or [])[:flash_limit]:
             content = item.get("content", "")
@@ -314,7 +314,7 @@ def fetch_jin10(flash_limit: int = 30, news_limit: int = 15) -> list[dict]:
                 "summary": _strip_html(content)[:300],
                 "published_at": item.get("time"),
             })
-    news = _jin10_call("list_news", {})
+    news = jin10_call("list_news", {})
     if news:
         for item in (news.get("data", {}).get("items") or [])[:news_limit]:
             items.append({
@@ -327,6 +327,9 @@ def fetch_jin10(flash_limit: int = 30, news_limit: int = 15) -> list[dict]:
                 "published_at": item.get("time") or item.get("published_at"),
             })
     return items
+
+
+_jin10_call = jin10_call  # 兼容旧调用名
 
 
 def fetch_wscn_live(limit: int = 20) -> list[dict]:
