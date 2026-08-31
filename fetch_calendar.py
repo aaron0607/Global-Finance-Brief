@@ -24,6 +24,7 @@ import datetime as dt
 import json
 import re
 import sys
+from collections import Counter
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -261,7 +262,7 @@ def fetch_eastmoney_calendar(start: dt.date, end: dt.date) -> tuple[list[dict], 
             items.append({
                 "when": when, "title": title, "region": region, "tag": tag,
                 "importance": star, "score": score_data_item(title, star, region, tag),
-                "kind": "data", "source": "eastmoney-fecalendar",
+                "kind": "data", "source": "eastmoney-fecalendar", "period": period,
                 "consensus": None, "previous": None,
             })
             continue
@@ -283,17 +284,29 @@ def fetch_eastmoney_calendar(start: dt.date, end: dt.date) -> tuple[list[dict], 
 
 
 def dedupe(items: list[dict]) -> list[dict]:
-    """跨源去重：同一天同地区同关键指标只留分高的一条；否则按标题去重。"""
-    best: dict[tuple, dict] = {}
-    for item in sorted(items, key=lambda x: (-x["score"], x["when"])):
+    """跨源去重：同一天同地区同关键指标只留分高的一条；否则按标题去重。
+
+    东方财富偶发把同一场数据的报告期写错（如 9/10 的 PPI 中混入一条“报告期:2026年09月”，
+    其余七条均为 08 月）。同组内先按多数报告期取值，再挑分最高的一条，避免标题写错月份。
+    """
+    buckets: dict[tuple, list[dict]] = {}
+    for item in items:
         day = item["when"].date().isoformat()
         if item["tag"]:
             key = (day, item["region"], item["tag"])
         else:
             key = (day, re.sub(r"[^\w一-鿿]", "", item["title"])[:24])
-        if key not in best:
-            best[key] = item
-    return list(best.values())
+        buckets.setdefault(key, []).append(item)
+    picked = []
+    for members in buckets.values():
+        periods = [m.get("period") for m in members if m.get("period")]
+        if periods:
+            modal = Counter(periods).most_common(1)[0][0]
+            candidates = [m for m in members if m.get("period") in (modal, None)] or members
+        else:
+            candidates = members
+        picked.append(max(candidates, key=lambda m: (m["score"], -m["when"].timestamp())))
+    return picked
 
 
 def group_events(items: list[dict]) -> list[dict]:

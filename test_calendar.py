@@ -106,6 +106,24 @@ class EastmoneyNormalizationTests(unittest.TestCase):
         )
 
 
+class PeriodMajorityTests(unittest.TestCase):
+    """东方财富偶发把同场数据的报告期写错（9/10 的 PPI 混入一条 09 月，其余为 08 月）。"""
+
+    def test_modal_period_wins(self):
+        when = dt.datetime(2026, 9, 10, 20, 30, tzinfo=TZ)
+        items = [
+            {"when": when, "title": "美国9月PPI", "region": "美国", "tag": "PPI", "importance": 4,
+             "score": 9, "kind": "data", "source": "eastmoney-fecalendar", "period": "9月"},
+            {"when": when, "title": "美国8月PPI", "region": "美国", "tag": "PPI", "importance": 4,
+             "score": 9, "kind": "data", "source": "eastmoney-fecalendar", "period": "8月"},
+            {"when": when, "title": "美国8月PPI同比", "region": "美国", "tag": "PPI", "importance": 4,
+             "score": 9, "kind": "data", "source": "eastmoney-fecalendar", "period": "8月"},
+        ]
+        kept = fetch_calendar.dedupe(items)
+        self.assertEqual(len(kept), 1)
+        self.assertTrue(kept[0]["title"].startswith("美国8月"))
+
+
 class CalendarValidationTests(unittest.TestCase):
     def content(self, calendar, day="20260901"):
         return {"date_yyyymmdd": day, "calendar": calendar}
