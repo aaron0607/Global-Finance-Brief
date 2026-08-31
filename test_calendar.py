@@ -181,3 +181,35 @@ class FeedLoadingTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Jin10ClientTests(unittest.TestCase):
+    """金十 MCP 是无会话实现：不返回 Mcp-Session-Id，客户端不得因此判定失败。
+
+    旧版要求该响应头，服务器上金十源长期静默为 0 条（新闻与日历都受影响）。
+    """
+
+    def test_call_succeeds_without_session_header(self):
+        import fetch_news
+
+        class FakeResponse:
+            def __init__(self, body=b"", status=200):
+                self.status_code = status
+                self.headers = {}
+                self.content = body
+
+        calls = []
+
+        def fake_post(url, headers=None, timeout=None, json=None):
+            calls.append(json.get("method"))
+            if json.get("method") == "tools/call":
+                payload = {"jsonrpc": "2.0", "id": 2,
+                           "result": {"content": [{"type": "text", "text": '{"status": 200, "data": []}'}]}}
+                return FakeResponse(("data: " + __import__("json").dumps(payload)).encode("utf-8"))
+            return FakeResponse()
+
+        with patch.object(fetch_news, "JIN10_MCP_TOKEN", "test-token"), \
+             patch.object(fetch_news.SESSION, "post", fake_post):
+            result = fetch_news.jin10_call("list_calendar", {})
+        self.assertEqual(result, {"status": 200, "data": []})
+        self.assertIn("tools/call", calls)

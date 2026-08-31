@@ -261,11 +261,14 @@ def jin10_call(tool: str, arguments: dict, timeout: int = 20) -> Optional[dict]:
                   "params": {"protocolVersion": "2024-11-05", "capabilities": {},
                              "clientInfo": {"name": "brief", "version": "1.0"}}},
         )
-        session_id = init.headers.get("Mcp-Session-Id")
-        if not session_id:
-            print("[warn] 金十 MCP 初始化失败", file=sys.stderr)
+        if init.status_code != 200:
+            print("[warn] 金十 MCP 初始化失败 HTTP %d" % init.status_code, file=sys.stderr)
             return None
-        headers["Mcp-Session-Id"] = session_id
+        # 金十服务端是无会话实现：不返回 Mcp-Session-Id，也不需要它。
+        # 旧版把缺失该头当成初始化失败，导致金十源在服务器上长期静默为 0 条。
+        session_id = init.headers.get("Mcp-Session-Id")
+        if session_id:
+            headers["Mcp-Session-Id"] = session_id
         SESSION.post(JIN10_MCP_URL, headers=headers, timeout=timeout,
                      json={"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}})
         resp = SESSION.post(
