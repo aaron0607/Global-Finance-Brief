@@ -90,7 +90,7 @@
 
 ## 效率核心原则
 
-1. **并行优先**：Phase 1（fetch_market + fetch_views + fetch_news）并行；Phase 2（5组搜索）一次并发；Phase 3（5-8篇文章原文）一次并发
+1. **并行优先**：Phase 1（fetch_market + fetch_views + fetch_news + fetch_calendar）并行；Phase 2（5组搜索）一次并发；Phase 3（5-8篇文章原文）一次并发
 2. **一次生成 JSON**：从 template 复制后用 Python json.dump 生成，不手写字符串不逐行调试
 3. **一次砍字数**：首次构建看分段统计 → 找最大板块按比例砍 → 二次构建验证
 4. **不在JSON格式上浪费回合**：中文引号是最大的沉默杀手，永远用 json.dump
