@@ -4,11 +4,16 @@ import re
 from unittest.mock import patch
 
 from write_brief import (
+    NORMAL_PROFILE,
+    THIN_PROFILE,
     WEEKDAYS,
+    _expected_prev_us_session,
+    build_prompt,
     build_repair_prompt,
     ensure_main_title,
     ensure_note_floor,
     fallback_main_title,
+    is_thin_session,
     normalize_main_title,
     sanitize_content,
     title_news_errors,
@@ -289,6 +294,95 @@ class ContentRepairTests(unittest.TestCase):
         snapshot = [section["note"] for section in content["sections"]]
         self.assertEqual(ensure_note_floor(content), 0)
         self.assertEqual(snapshot, [section["note"] for section in content["sections"]])
+
+
+class ThinSessionTests(unittest.TestCase):
+    def test_expected_prev_session_weekday_math(self):
+        # 周二至周五 → 前一天
+        self.assertEqual(_expected_prev_us_session(dt.date(2026, 9, 8)), dt.date(2026, 9, 7))
+        # 周一 → 上周五
+        self.assertEqual(_expected_prev_us_session(dt.date(2026, 9, 7)), dt.date(2026, 9, 4))
+        # 周日 → 周五；周六 → 周五
+        self.assertEqual(_expected_prev_us_session(dt.date(2026, 9, 6)), dt.date(2026, 9, 4))
+        self.assertEqual(_expected_prev_us_session(dt.date(2026, 9, 5)), dt.date(2026, 9, 4))
+
+    def test_post_holiday_tuesday_is_thin(self):
+        # 劳动节后周二：最近美股交易日停在上周五，落后于预期的周一
+        snap = {"price_index_session_date": "2026-09-04"}
+        self.assertTrue(is_thin_session(snap, dt.date(2026, 9, 8)))
+
+    def test_normal_tuesday_is_not_thin(self):
+        snap = {"price_index_session_date": "2026-09-07"}
+        self.assertFalse(is_thin_session(snap, dt.date(2026, 9, 8)))
+
+    def test_normal_monday_after_weekend_is_not_thin(self):
+        snap = {"price_index_session_date": "2026-09-04"}
+        self.assertFalse(is_thin_session(snap, dt.date(2026, 9, 7)))
+
+    def test_missing_or_bad_session_date_is_not_thin(self):
+        self.assertFalse(is_thin_session({}, dt.date(2026, 9, 8)))
+        self.assertFalse(is_thin_session({"price_index_session_date": "n/a"}, dt.date(2026, 9, 8)))
+
+
+class ThinProfileValidationTests(unittest.TestCase):
+    def _content_with_ai_tech_bullets(self, count, filler_chars):
+        markers = "[[c:关键判断]][[red:关键数据]]"
+        content = {
+            "date_yyyymmdd": "20260908", "date_cn": "date", "as_of": "asof",
+            "alert_time": "08:20", "alert": "[[red:科技反弹]][[green:油价回落]]" + "a" * 180,
+            "index_note": "index", "qdii_date_label": "qdii",
+            "sources": [{"source": "s"}], "calendar": [],
+            "logic_chain": {"paths": [{"name": "A", "color": "c", "body": "b", "sub": "s"}] * 3,
+                            "priority": "p"},
+            "sections": [
+                {"id": "focus", "title": "t", "bullets": [markers + "x" * 240] * 3, "note": "n" * 50},
+                {"id": "ai_tech", "title": "t", "bullets": [markers + "论" * filler_chars] * count, "note": "n" * 50},
+                {"id": "stock_rotation", "title": "t", "bullets": ["[[c:判断]]" + "x" * 240] * 2, "note": "n" * 50},
+                {"id": "macro", "title": "t", "bullets": ["[[c:判断]]" + "x" * 240] * 3, "note": "n" * 50},
+                {"id": "commodity", "title": "t", "bullets": ["[[c:判断]]" + "x" * 240] * 2, "note": "n" * 50},
+            ],
+        }
+        return content
+
+    def test_thin_profile_allows_three_ai_tech_bullets(self):
+        content = self._content_with_ai_tech_bullets(3, 240)
+        # 正常档 ai_tech 下限为 4 条 → 报错
+        self.assertTrue(any("ai_tech bullets" in e for e in validate_required(content, "20260908")))
+        # 淡日档 ai_tech 下限为 3 条 → 通过
+        self.assertEqual(
+            [e for e in validate_required(content, "20260908",
+                                          THIN_PROFILE["bullet_rules"], THIN_PROFILE["min_bullet_chars"])
+             if "ai_tech bullets" in e], [])
+
+    def test_thin_profile_relaxes_bullet_char_floor_to_90(self):
+        # 90 字可见正文：正常档（下限100）报错，淡日档（下限90）通过
+        content = self._content_with_ai_tech_bullets(4, 90 - 8)  # markers 可见 8 字 → 可见合计 90
+        self.assertEqual(visible_text_length(content["sections"][1]["bullets"][0]), 90)
+        self.assertTrue(any("ai_tech bullet[1] 可见正文至少 100" in e
+                            for e in validate_required(content, "20260908")))
+        self.assertFalse(any("ai_tech bullet[1] 可见正文至少" in e
+                             for e in validate_required(content, "20260908",
+                                                        THIN_PROFILE["bullet_rules"],
+                                                        THIN_PROFILE["min_bullet_chars"])))
+
+
+class ThinPromptTests(unittest.TestCase):
+    SNAP = {"news_window": {"start": "2026-09-07T08:20:01+08:00", "end": "2026-09-08T08:20:01+08:00"},
+            "indices": [], "commodities": [], "extra_quotes": []}
+
+    def _build(self, profile):
+        return build_prompt(self.SNAP, [], "20260908", "date", "08:20",
+                            "2026-09-08T08:20:01+08:00", "index", "qdii", "", None, [], profile)
+
+    def test_thin_prompt_injects_notice_and_relaxed_numbers(self):
+        prompt = self._build(THIN_PROFILE)
+        self.assertIn("淡日提示", prompt)
+        self.assertIn("%d-%d 字" % (THIN_PROFILE["target_min"], THIN_PROFILE["target_max"]), prompt)
+
+    def test_normal_prompt_has_no_thin_notice(self):
+        prompt = self._build(NORMAL_PROFILE)
+        self.assertNotIn("淡日提示", prompt)
+        self.assertIn("%d-%d 字" % (NORMAL_PROFILE["target_min"], NORMAL_PROFILE["target_max"]), prompt)
 
 
 if __name__ == "__main__":

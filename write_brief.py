@@ -83,6 +83,28 @@ MIN_BULLET_CHARS = {
     "macro": 100,
     "commodity": 100,
 }
+# ── 淡日感知 + 降级放行档位 ──────────────────────────────
+# 正常档沿用上面的常量。淡日=美股休市/长假后首日（隔夜无新成交、过夜新闻偏少），
+# 此时放宽整稿字数下限与 ai_tech 条数下限，避免模型为凑字注水或整篇被判死。
+# ACCEPT_MIN：降级放行下限——结构/时效/日历/强调色全过、build rc=0，仅整稿略短于硬下限时接受。
+ACCEPT_MIN = 5500
+
+NORMAL_PROFILE = {
+    "thin": False,
+    "target_min": TARGET_MIN, "target_max": TARGET_MAX,
+    "hard_min": HARD_MIN, "hard_max": HARD_MAX,
+    "accept_min": ACCEPT_MIN,
+    "bullet_rules": BULLET_RULES,
+    "min_bullet_chars": MIN_BULLET_CHARS,
+}
+THIN_PROFILE = {
+    "thin": True,
+    "target_min": 5800, "target_max": 6300,
+    "hard_min": 5500, "hard_max": HARD_MAX,
+    "accept_min": 5200,
+    "bullet_rules": {**BULLET_RULES, "ai_tech": (3, 5)},
+    "min_bullet_chars": {sid: 90 for sid in MIN_BULLET_CHARS},
+}
 NOTE_FLOOR_SUFFIXES = {
     "focus": "后续重点观察关键事件、数据与盘面能否形成同向验证。",
     "ai_tech": "后续重点观察订单、资本开支与业绩指引能否继续验证。",
@@ -205,9 +227,47 @@ def format_market(snap: dict) -> str:
     return "\n".join(lines)
 
 
+def _expected_prev_us_session(brief_date: dt.date) -> dt.date:
+    """给定简报日期，返回“正常情况下”最近的一个美股交易日（周末回退到周五）。
+    仅用星期数学，不依赖外部交易日历——足以把长假/临时休市识别为“最近交易日更旧”。"""
+    weekday = brief_date.weekday()  # 周一=0 … 周日=6
+    if weekday == 0:      # 周一 → 上周五
+        delta = 3
+    elif weekday == 5:    # 周六 → 周五
+        delta = 1
+    elif weekday == 6:    # 周日 → 周五
+        delta = 2
+    else:                 # 周二至周五 → 前一天
+        delta = 1
+    return brief_date - dt.timedelta(days=delta)
+
+
+def is_thin_session(snap: dict, brief_date: dt.date) -> bool:
+    """淡日判定：美股最近交易日比“应有的上一交易日”更旧，说明中间有休市日
+    （长假/节日），隔夜无新成交、过夜新闻偏薄。每天早晨美股都处于“休市”状态，
+    因此不能用 market_state，而要看 session_date 是否落后于预期。"""
+    session_date = snap.get("price_index_session_date")
+    if not session_date:
+        return False
+    try:
+        session = dt.date.fromisoformat(str(session_date))
+    except ValueError:
+        return False
+    return session < _expected_prev_us_session(brief_date)
+
+
 def build_prompt(snap: dict, pool: list[dict], day: str, date_cn: str, alert_time: str,
                  as_of: str, index_note: str, qdii_label: str, views_text: str,
-                 feedback: str | None = None, calendar_events: list[dict] | None = None) -> str:
+                 feedback: str | None = None, calendar_events: list[dict] | None = None,
+                 profile: dict | None = None) -> str:
+    profile = profile or NORMAL_PROFILE
+    tmin, tmax = profile["target_min"], profile["target_max"]
+    hmin, hmax = profile["hard_min"], profile["hard_max"]
+    thin_block = ("\n【淡日提示（重要）】今日为美股休市/长假后的第一个交易日：隔夜美股无新成交、"
+                  "过夜新闻明显偏少。请勿为凑字硬造事实、堆砌碎段或重复背景；把篇幅重心放在宏观利率、"
+                  "大宗商品、亚洲与欧洲盘面，以及【本周财经日历】的前瞻解读上。允许每条论证段略短、"
+                  "板块条数取下限，整体字数下限已相应放宽——写满真实信息即可，不要注水。\n"
+                  ) if profile.get("thin") else ""
     sections_hint = (
         "固定板块顺序：focus(头号焦点)、ai_tech(AI·芯片·科技，核心板块)、"
         "stock_rotation(资金轮动)、iran(中东地缘，仅当有实质进展时)、macro(宏观·利率)、"
@@ -264,9 +324,9 @@ def build_prompt(snap: dict, pool: list[dict], day: str, date_cn: str, alert_tim
    - 美联储路径：中性=年内不降息、乐观=降1次、悲观=加1次；油价回落→CPI降温→加息预期修正。
 10. **时效铁律**：以最近 12 小时为主体、24 小时为上限；**已公布数据（CPI/PPI/NFP 等）不得作为头条/alert 的"最新"事件**，只能作背景引用或列入 calendar 的待发布项；宏观板块须以当日最新角度开篇（利率定价/官员表态/当日数据/前瞻窗口）。**未来日期严禁凭记忆填写**：正文提到的未来数据/事件日期只能来自【本周财经日历】或【新闻池】原文；calendar 字段留空数组，由脚本用结构化日历源回填。
 11. **头号焦点优先级**：AI大模型发布/重大突破 > 芯片/半导体重大事件 > 科技巨头财报 > CEO重磅发言 > 宏观政策 > 地缘（仅战争升级/停火/制裁重大变化级别）。
-12. 字数（最重要）：渲染后正文目标 **{TARGET_MIN}-{TARGET_MAX} 字**，硬范围 {HARD_MIN}-{HARD_MAX}。不要靠增加碎段凑字。**focus 每段 280-360 字，ai_tech 每段 270-350 字，stock_rotation/iran/macro 每段 230-310 字，commodity 两段各 250-320 字**；这里指去掉 `[[c:]]`、`[[red:]]`、`[[green:]]` 和 `**` 后读者实际看到的字数。每段通常 3-5 句，内部顺序为“事实与数字→市场反应/交叉验证→传导逻辑→风险或验证条件”。alert 可见正文 180-240 字，logic_chain 合计 450-650 字，note 40-90 字。无 iran 时，把缺口集中补进 focus 与 ai_tech 的新增论证段。
+12. 字数（最重要）：渲染后正文目标 **{tmin}-{tmax} 字**，硬范围 {hmin}-{hmax}。不要靠增加碎段凑字。**focus 每段 280-360 字，ai_tech 每段 270-350 字，stock_rotation/iran/macro 每段 230-310 字，commodity 两段各 250-320 字**；这里指去掉 `[[c:]]`、`[[red:]]`、`[[green:]]` 和 `**` 后读者实际看到的字数。每段通常 3-5 句，内部顺序为“事实与数字→市场反应/交叉验证→传导逻辑→风险或验证条件”。alert 可见正文 180-240 字，logic_chain 合计 450-650 字，note 40-90 字。无 iran 时，把缺口集中补进 focus 与 ai_tech 的新增论证段。
 13. **编辑感铁律**：板块标题必须写出本节核心矛盾或结论，格式为“板块名 | 结论/反差”，不能只是罗列新闻名词；段落之间用事实推进。同一事实只在最相关板块完整展开，其他板块只写其新增含义，禁止重复背景、万能结论和“短线波动不改长期趋势”式套话。
-
+{thin_block}
 【日期与标识】（照抄以下值）
 - date_yyyymmdd = "{day}"
 - date_cn = "{date_cn}"
@@ -287,8 +347,11 @@ def build_prompt(snap: dict, pool: list[dict], day: str, date_cn: str, alert_tim
 
 def build_repair_prompt(content: dict, feedback: str, pool: list[dict], day: str,
                         date_cn: str, alert_time: str, as_of: str, index_note: str,
-                        qdii_label: str) -> str:
+                        qdii_label: str, profile: dict | None = None) -> str:
     """Build a focused revision request around the last parseable candidate."""
+    profile = profile or NORMAL_PROFILE
+    tmin, tmax = profile["target_min"], profile["target_max"]
+    hmin, hmax = profile["hard_min"], profile["hard_max"]
     news_lines = []
     for i, item in enumerate(pool[:30], 1):
         text = item["title"] + ("。" + item["summary"] if item["summary"] else "")
@@ -302,7 +365,7 @@ def build_repair_prompt(content: dict, feedback: str, pool: list[dict], day: str
 3. 字数超限时，按反馈中的分段字数优先压缩最大板块，删除重复解读，保留事实、关键数字和结论。
 4. sections 顺序必须是 focus、ai_tech、stock_rotation、iran（仅有实质进展时）、macro、commodity。目标为 focus 3 条、ai_tech 4 条、stock_rotation 2 条、iran 3 条、macro 3 条、commodity 2 条；无 iran 时 focus/ai_tech 可各增加 1 条，重大信号充足时 stock_rotation/macro 可各增加 1 条。每个板块必须有 id/title/bullets/note。
 5. logic_chain 必须有 paths 三项和非空 priority，每条路径必须有 name/color/body/sub；priority 必须是单个字符串，不能是数组。calendar 由脚本确定性回填，保持原样不要改动。
-6. sections+alert+logic_chain+calendar 最终必须在 {HARD_MIN}-{HARD_MAX} 字，优先收敛到 {TARGET_MIN}-{TARGET_MAX} 字。
+6. sections+alert+logic_chain+calendar 最终必须在 {hmin}-{hmax} 字，优先收敛到 {tmin}-{tmax} 字。
 7. 正文事实只能来自下方新闻池或上一版已有内容；禁止出现“据XX报道”“据报道”“有报道称”、“新闻池”、“行情快照”、“脚本”等客户不可见表述。
 8. 以下标识必须原样使用：date_yyyymmdd={day}；date_cn={date_cn}；as_of={as_of}；alert_time={alert_time}；index_note={index_note}；qdii_date_label={qdii_label}。禁止输出 indices/commodities。
 9. 若反馈涉及强调色，只在原有事实中圈选短语加标记，不改写或新增事实：每条 bullet 至少 1 处，focus/ai_tech 合计至少为 bullet 数的 2 倍，alert 至少 2 处；red=上涨/改善/利多，green=下跌/恶化/利空，c=关键事实/机构观点/结论/验证条件；单处不超过 40 字，禁止整段着色，**粗体**不计数。
@@ -757,7 +820,10 @@ def ensure_main_title(content: dict, snap: dict, pool: list[dict]) -> str | None
     return "main_title 单独修复未通过，已使用行情兜底：%s → %s" % (original, fallback)
 
 
-def validate_required(content: dict, day: str) -> list[str]:
+def validate_required(content: dict, day: str, bullet_rules: dict | None = None,
+                      min_bullet_chars: dict | None = None) -> list[str]:
+    bullet_rules = bullet_rules or BULLET_RULES
+    min_bullet_chars = min_bullet_chars or MIN_BULLET_CHARS
     errors = []
     errors.extend(validate_no_structure_leaks(content))
     for field in ("date_yyyymmdd", "date_cn", "as_of", "alert_time", "alert",
@@ -785,7 +851,6 @@ def validate_required(content: dict, day: str) -> list[str]:
         expected.extend(["macro", "commodity"])
         if ids != expected:
             errors.append("sections 顺序/集合应为 %s，实际为 %s" % (expected, ids))
-        bullet_rules = BULLET_RULES
         for index, sec in enumerate(sections):
             if not isinstance(sec, dict):
                 errors.append("sections[%d] 不是对象" % index)
@@ -804,10 +869,10 @@ def validate_required(content: dict, day: str) -> list[str]:
                 for bullet_index, bullet in enumerate(bullets, 1):
                     if not isinstance(bullet, str) or not bullet.strip():
                         errors.append("板块 %s bullet[%d] 为空" % (sid, bullet_index))
-                    elif (sid in MIN_BULLET_CHARS
-                          and visible_text_length(bullet) < MIN_BULLET_CHARS[sid]):
+                    elif (sid in min_bullet_chars
+                          and visible_text_length(bullet) < min_bullet_chars[sid]):
                         errors.append("板块 %s bullet[%d] 可见正文至少 %d 字，实际 %d 字" % (
-                            sid, bullet_index, MIN_BULLET_CHARS[sid],
+                            sid, bullet_index, min_bullet_chars[sid],
                             visible_text_length(bullet)))
             note = sec.get("note")
             if not isinstance(note, str):
@@ -894,6 +959,12 @@ def main() -> int:
         price_sd.year, price_sd.month, price_sd.day, WEEKDAYS[price_sd.weekday()]
     )
 
+    # 淡日感知：美股休市/长假后首日隔夜无新成交、过夜新闻偏薄，放宽字数下限与 ai_tech 条数下限。
+    profile = THIN_PROFILE if is_thin_session(snap, as_of_dt.date()) else NORMAL_PROFILE
+    if profile["thin"]:
+        print("淡日档位：美股最近交易日为 %s（长假/休市后首日），字数下限放宽至 %d，目标 %d-%d"
+              % (price_session_date, profile["hard_min"], profile["target_min"], profile["target_max"]))
+
     window_start = parse_iso(snap["news_window"]["start"])
     window_end = parse_iso(snap["news_window"]["end"])
     pool = build_news_pool(window_start, window_end)
@@ -924,16 +995,17 @@ def main() -> int:
     parsed_any = False
     wrote_candidate = False
     candidate = None
+    best_degraded = None  # (count, content)：结构全过、仅整稿略短于硬下限的最佳候选
     for attempt in range(1, MAX_ATTEMPTS + 1):
         action = "生成初稿" if candidate is None else "定向修复"
         print("写稿尝试 %d/%d（%s）..." % (attempt, MAX_ATTEMPTS, action), file=sys.stderr)
         if candidate is None:
             prompt = build_prompt(snap, pool, day, date_cn, alert_time, as_of, index_note,
-                                  qdii_label, views_for_prompt, feedback, calendar_events)
+                                  qdii_label, views_for_prompt, feedback, calendar_events, profile)
         else:
             prompt = build_repair_prompt(
                 candidate, feedback or "请修复并通过全部校验。", pool,
-                day, date_cn, alert_time, as_of, index_note, qdii_label,
+                day, date_cn, alert_time, as_of, index_note, qdii_label, profile,
             )
         raw, finish_reason = call_deepseek(prompt)
         Path("/tmp/wb_last_raw.txt").write_text(raw, encoding="utf-8")
@@ -951,7 +1023,7 @@ def main() -> int:
         warnings = post_process(content, snap, pool, day, date_cn, alert_time, as_of, index_note,
                                 qdii_label, calendar_events)
         candidate = content
-        errors = validate_required(content, day)
+        errors = validate_required(content, day, profile["bullet_rules"], profile["min_bullet_chars"])
         if errors:
             feedback = "上次输出不完整：" + "；".join(errors)
             print("  结构校验失败：" + "；".join(errors), file=sys.stderr)
@@ -977,13 +1049,19 @@ def main() -> int:
             feedback = "无法解析字数，请确保结构完整。"
             print("  字数解析失败", file=sys.stderr)
             continue
-        print("  正文 %d 字（硬约束 %d-%d，目标 %d-%d）" % (count, HARD_MIN, HARD_MAX, TARGET_MIN, TARGET_MAX))
-        if HARD_MIN <= count <= HARD_MAX:
+        hmin, hmax = profile["hard_min"], profile["hard_max"]
+        tmin, tmax = profile["target_min"], profile["target_max"]
+        print("  正文 %d 字（硬约束 %d-%d，目标 %d-%d%s）"
+              % (count, hmin, hmax, tmin, tmax, "，淡日档" if profile["thin"] else ""))
+        if hmin <= count <= hmax:
             for w in warnings:
                 print("  ⚠️ " + w, file=sys.stderr)
             print("✓ 写稿完成：%s" % out_path)
             return 0
-        delta = TARGET_MAX - count
+        # 结构/时效/日历/强调色全过、build rc=0，仅整稿略短于硬下限——记为降级放行候选（取最长者）
+        if profile["accept_min"] <= count < hmin and (best_degraded is None or count > best_degraded[0]):
+            best_degraded = (count, content)
+        delta = tmax - count
         direction = "增加" if delta > 0 else "减少"
         section_counts = parse_section_counts(out)
         if delta > 0:
@@ -999,9 +1077,18 @@ def main() -> int:
         feedback = ("上次正文 %d 字，需%s约 %d 字（向目标 %d-%d 靠拢）。"
                     "分段字数：%s。%s不要逐字微调，保留合格板块，"
                     "定向修订后输出完整 JSON。"
-                    % (count, direction, abs(delta), TARGET_MIN, TARGET_MAX,
+                    % (count, direction, abs(delta), tmin, tmax,
                        section_counts, adjustment))
         print("  字数 %s，重试" % ("偏少" if delta > 0 else "超限"), file=sys.stderr)
+
+    if best_degraded is not None:
+        count, content = best_degraded
+        write_content(BASE / ("content_%s.json" % day), content)
+        print("⚠️ 降级放行：正文 %d 字（低于硬下限 %d，但 ≥ 容差下限 %d，且结构/时效/日历/强调色全过、"
+              "build rc=0），已保留为正式 content_%s.json 继续构建发布。"
+              % (count, profile["hard_min"], profile["accept_min"], day), file=sys.stderr)
+        print("✓ 写稿完成（降级放行，字数偏少）：content_%s.json" % day)
+        return 3
 
     if wrote_candidate:
         print("✗ 连续 %d 次写稿未达硬约束（最后正文 %s 字，构建 rc=%s）；"

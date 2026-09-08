@@ -93,7 +93,13 @@ if [ "$WRITE_RC" -eq 2 ]; then
   notify "⚠️ 财经简报 ${DAY} 失败：模型已返回 JSON，但结构/字数/强调色校验未通过"
   exit 1
 fi
-if [ "$WRITE_RC" -ne 0 ]; then
+# rc=3：结构/时效/日历/强调色全过、build rc=0，仅整稿略短于硬下限，降级放行继续发布。
+DEGRADED=0
+if [ "$WRITE_RC" -eq 3 ]; then
+  log "⚠️ 写稿字数偏少但结构/时效/日历/强调色全过，降级放行，继续构建发布"
+  DEGRADED=1
+fi
+if [ "$WRITE_RC" -ne 0 ] && [ "$WRITE_RC" -ne 3 ]; then
   log "✗ 写稿 API 调用或响应解析失败(rc=$WRITE_RC)"
   notify "⚠️ 财经简报 ${DAY} 失败：写稿 API 调用或响应解析异常"
   exit 1
@@ -121,4 +127,8 @@ if [ "$PUB_RC" -ne 0 ]; then
 fi
 
 log "✓ 财经简报 ${DAY} 完成：${PROJ_DIR}/content_${DAY}.json / wechat_article_${DAY}.html"
-notify "✓ 财经简报 ${DAY} 已创建公众号草稿，请到后台确认后发表"
+if [ "${DEGRADED:-0}" -eq 1 ]; then
+  notify "✓ 财经简报 ${DAY} 已创建公众号草稿（⚠️ 字数偏少已降级放行，请后台复核篇幅后发表）"
+else
+  notify "✓ 财经简报 ${DAY} 已创建公众号草稿，请到后台确认后发表"
+fi
