@@ -10,6 +10,7 @@ from write_brief import (
     _expected_prev_us_session,
     build_prompt,
     build_repair_prompt,
+    ensure_length_floors,
     ensure_main_title,
     ensure_note_floor,
     fallback_main_title,
@@ -21,7 +22,8 @@ from write_brief import (
     validate_required,
     visible_text_length,
 )
-from content_validation import COLOR_MARKER_RE, ensure_emphasis, validate_no_structure_leaks
+from content_validation import (COLOR_MARKER_RE, COLOR_SPAN_MAX, ensure_emphasis,
+                                trim_long_emphasis, validate_no_structure_leaks)
 
 
 class WeekdayMappingTests(unittest.TestCase):
@@ -383,6 +385,53 @@ class ThinPromptTests(unittest.TestCase):
         prompt = self._build(NORMAL_PROFILE)
         self.assertNotIn("淡日提示", prompt)
         self.assertIn("%d-%d 字" % (NORMAL_PROFILE["target_min"], NORMAL_PROFILE["target_max"]), prompt)
+
+
+class DeterministicNormalizerTests(unittest.TestCase):
+    def test_trim_long_emphasis_shrinks_span_keeps_visible_text(self):
+        long_inner = "关键判断" * 13  # 52 字 > 40 上限
+        content = {"alert": "", "sections": [
+            {"id": "ai_tech", "bullets": ["[[c:%s]]收尾" % long_inner]}]}
+        before_visible = visible_text_length(content["sections"][0]["bullets"][0])
+        self.assertEqual(trim_long_emphasis(content), 1)
+        bullet = content["sections"][0]["bullets"][0]
+        # 每处强调色 span 不再超过上限
+        self.assertTrue(all(len(m) <= COLOR_SPAN_MAX for m in COLOR_MARKER_RE.findall(bullet)))
+        # 可见正文一字不变（解出的部分仍在）
+        self.assertEqual(visible_text_length(bullet), before_visible)
+        # 幂等
+        self.assertEqual(trim_long_emphasis(content), 0)
+
+    def test_ensure_length_floors_pads_short_bullet_and_alert(self):
+        content = {
+            "alert": "[[c:导读]]" + "读" * 170,  # 可见 172 < 180
+            "sections": [
+                {"id": "macro", "bullets": ["[[c:判断]]" + "论" * 94]},  # 可见 96 < 100
+            ],
+        }
+        self.assertEqual(visible_text_length(content["alert"]), 172)
+        self.assertEqual(visible_text_length(content["sections"][0]["bullets"][0]), 96)
+        filled = ensure_length_floors(content)
+        self.assertEqual(filled, 2)
+        self.assertGreaterEqual(visible_text_length(content["alert"]), 180)
+        self.assertGreaterEqual(visible_text_length(content["sections"][0]["bullets"][0]), 100)
+        # 幂等：达标后不再改动
+        self.assertEqual(ensure_length_floors(content), 0)
+
+    def test_ensure_length_floors_thin_profile_floor_90(self):
+        content = {"alert": "x" * 200, "sections": [
+            {"id": "ai_tech", "bullets": ["[[c:判断]]" + "论" * 84]}]}  # 可见 86
+        self.assertEqual(visible_text_length(content["sections"][0]["bullets"][0]), 86)
+        # 淡日档下限 90 → 补足到 90+
+        filled = ensure_length_floors(content, THIN_PROFILE["min_bullet_chars"])
+        self.assertEqual(filled, 1)
+        self.assertGreaterEqual(visible_text_length(content["sections"][0]["bullets"][0]), 90)
+
+    def test_ensure_length_floors_skips_empty_bullet(self):
+        content = {"alert": "x" * 200, "sections": [{"id": "macro", "bullets": [""]}]}
+        # 空段不凭空造整段，交给结构校验拦截
+        self.assertEqual(ensure_length_floors(content), 0)
+        self.assertEqual(content["sections"][0]["bullets"][0], "")
 
 
 if __name__ == "__main__":

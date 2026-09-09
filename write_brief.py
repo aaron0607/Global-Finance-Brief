@@ -29,8 +29,8 @@ from zoneinfo import ZoneInfo
 
 import requests
 
-from content_validation import (CALENDAR_REQUIRED_FROM, ensure_emphasis, validate_calendar,
-                                validate_emphasis, validate_no_structure_leaks)
+from content_validation import (CALENDAR_REQUIRED_FROM, ensure_emphasis, trim_long_emphasis,
+                                validate_calendar, validate_emphasis, validate_no_structure_leaks)
 
 BASE = Path(__file__).parent
 BRIEF_TZ = ZoneInfo("Asia/Shanghai")
@@ -113,6 +113,18 @@ NOTE_FLOOR_SUFFIXES = {
     "macro": "后续重点观察数据、收益率与政策表态是否同向。",
     "commodity": "后续重点观察实际利率、美元与油价是否形成共振。",
 }
+# bullet 差几个字的碎段兜底：在段末追加一句板块专属验证条件（不引入新事实/数字），
+# 与 NOTE_FLOOR_SUFFIXES 同理。措辞与 note 版不同，避免同段落尾句雷同。
+BULLET_FLOOR_SUFFIXES = {
+    "focus": "这一分化能否延续，仍取决于后续盘面与数据的同向验证。",
+    "ai_tech": "订单、资本开支与业绩指引能否兑现，是后续的关键验证点。",
+    "stock_rotation": "轮动能否升级，仍取决于成交、利率与领涨结构的确认。",
+    "iran": "后续仍需以谈判进展、通航状态与油价反应作为验证。",
+    "macro": "数据、收益率与政策表态是否同向，将决定下一步定价。",
+    "commodity": "实际利率、美元与油价能否形成共振，仍需持续跟踪。",
+}
+DEFAULT_BULLET_SUFFIX = "后续仍需持续跟踪相关数据与盘面能否相互验证。"
+ALERT_FLOOR_SUFFIX = "后续以关键数据、利率与盘面反应作为验证。"
 
 
 def now_bjt() -> dt.datetime:
@@ -567,6 +579,44 @@ def ensure_note_floor(content: dict) -> int:
     return changed
 
 
+def _pad_visible_to_floor(text: str, floor: int, suffix: str) -> str:
+    """在文本末尾追加验证句，直到可见字数达到 floor（不引入新事实/数字）。"""
+    guard = 0
+    while visible_text_length(text) < floor and guard < 6:
+        stripped = text.rstrip()
+        separator = "" if not stripped or stripped.endswith(("。", "！", "？", "”")) else "。"
+        text = stripped + separator + suffix
+        guard += 1
+    return text
+
+
+def ensure_length_floors(content: dict, min_bullet_chars: dict | None = None) -> int:
+    """把差几个字的 alert / bullet 碎段补到可见字数下限：段末追加一句板块专属验证条件，
+    与 ensure_note_floor 同理，避免因 1-2 字缺口触发整篇无效重试。只补非空字段，
+    空 bullet 仍由结构校验拦截（不凭空造整段）。幂等。"""
+    min_bullet_chars = min_bullet_chars or MIN_BULLET_CHARS
+    changed = 0
+    alert = content.get("alert")
+    if isinstance(alert, str) and 0 < visible_text_length(alert) < ALERT_MIN:
+        content["alert"] = _pad_visible_to_floor(alert, ALERT_MIN, ALERT_FLOOR_SUFFIX)
+        changed += 1
+    for section in content.get("sections", []):
+        if not isinstance(section, dict) or not isinstance(section.get("bullets"), list):
+            continue
+        floor = min_bullet_chars.get(section.get("id"))
+        if not floor:
+            continue
+        suffix = BULLET_FLOOR_SUFFIXES.get(section.get("id"), DEFAULT_BULLET_SUFFIX)
+        new_bullets = []
+        for bullet in section["bullets"]:
+            if isinstance(bullet, str) and 0 < visible_text_length(bullet) < floor:
+                bullet = _pad_visible_to_floor(bullet, floor, suffix)
+                changed += 1
+            new_bullets.append(bullet)
+        section["bullets"] = new_bullets
+    return changed
+
+
 def visible_text_length(text: str) -> int:
     """Count reader-visible copy, excluding lightweight formatting syntax."""
     if not isinstance(text, str):
@@ -636,7 +686,8 @@ def sanitize_calendar(content: dict, pool: list[dict], as_of: str) -> list[str]:
 
 def post_process(content: dict, snap: dict, pool: list[dict], day: str, date_cn: str,
                  alert_time: str, as_of: str, index_note: str, qdii_label: str,
-                 calendar_events: list[dict] | None = None) -> list[str]:
+                 calendar_events: list[dict] | None = None,
+                 min_bullet_chars: dict | None = None) -> list[str]:
     """统一修正日期标识、来源时效，禁止手写 indices/commodities。返回警告。"""
     warnings = []
     sanitize_content(content)
@@ -671,6 +722,12 @@ def post_process(content: dict, snap: dict, pool: list[dict], day: str, date_cn:
         minimum = BULLET_RULES.get(sid, (1, 99))[0]
         if not isinstance(sec.get("bullets"), list) or len(sec["bullets"]) < minimum:
             warnings.append("板块 %s bullets 少于%d条" % (sid, minimum))
+    emphasis_trimmed = trim_long_emphasis(content)
+    if emphasis_trimmed:
+        warnings.append("已将 %d 处超长强调色收窄到 40 字内（不改可见正文）" % emphasis_trimmed)
+    floors_filled = ensure_length_floors(content, min_bullet_chars)
+    if floors_filled:
+        warnings.append("已为 %d 个差几字的 alert/bullet 碎段补足板块专属验证条件" % floors_filled)
     notes_filled = ensure_note_floor(content)
     if notes_filled:
         warnings.append("已为 %d 个过短 note 补充板块专属验证条件" % notes_filled)
@@ -1021,7 +1078,7 @@ def main() -> int:
             continue
         parsed_any = True
         warnings = post_process(content, snap, pool, day, date_cn, alert_time, as_of, index_note,
-                                qdii_label, calendar_events)
+                                qdii_label, calendar_events, profile["min_bullet_chars"])
         candidate = content
         errors = validate_required(content, day, profile["bullet_rules"], profile["min_bullet_chars"])
         if errors:

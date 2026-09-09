@@ -15,6 +15,7 @@ CALENDAR_MAX_ROWS = 6
 CALENDAR_FORWARD_DAYS = 10
 CALENDAR_EVENT_MAX = 60
 COLOR_MARKER_RE = re.compile(r"\[\[(?:red|green|c):(.+?)\]\]")
+COLOR_MARKER_KIND_RE = re.compile(r"\[\[(red|green|c):(.+?)\]\]")
 COLOR_SPAN_MAX = 40
 CORE_SECTIONS = {"focus", "ai_tech"}
 STRUCTURE_LEAK_RE = re.compile(
@@ -116,6 +117,40 @@ def ensure_emphasis(content: dict) -> int:
             for bullet in section["bullets"]
         ]
     return added
+
+
+def trim_long_emphasis(content: dict) -> int:
+    """把超过 COLOR_SPAN_MAX 的强调色 span 收窄到上限内：只保留前 40 字着色，
+    其余文字解出标记但保持可见——不删除、不改写任何可见正文，仅缩短着色范围。
+    避免模型偶发的“整句着色”因单处超 40 字触发整篇重试。幂等。"""
+    trimmed = 0
+
+    def fix(text: str) -> str:
+        nonlocal trimmed
+
+        def repl(match):
+            nonlocal trimmed
+            kind, inner = match.group(1), match.group(2)
+            if len(inner) <= COLOR_SPAN_MAX:
+                return match.group(0)
+            head = inner[:COLOR_SPAN_MAX]
+            cut = max((head.rfind(p) for p in "，。；：、,.;:"), default=-1)
+            if cut >= 4:
+                head, tail = inner[:cut + 1], inner[cut + 1:]
+            else:
+                head, tail = inner[:COLOR_SPAN_MAX], inner[COLOR_SPAN_MAX:]
+            trimmed += 1
+            return "[[%s:%s]]%s" % (kind, head, tail)
+
+        return COLOR_MARKER_KIND_RE.sub(repl, text)
+
+    if isinstance(content.get("alert"), str):
+        content["alert"] = fix(content["alert"])
+    for section in content.get("sections", []):
+        if not isinstance(section, dict) or not isinstance(section.get("bullets"), list):
+            continue
+        section["bullets"] = [fix(b) if isinstance(b, str) else b for b in section["bullets"]]
+    return trimmed
 
 
 def validate_emphasis(content: dict) -> list[str]:
