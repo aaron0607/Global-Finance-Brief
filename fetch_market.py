@@ -37,7 +37,8 @@ NY_TZ = ZoneInfo("America/New_York")
 UTC = dt.timezone.utc
 PROVIDER_SINA = "Sina Finance hq (gb_$)"
 PROVIDER_GOLD = "Sina Finance hq (hf_XAU)"
-PROVIDER_CBOE = "CBOE official daily CSV"
+PROVIDER_CBOE = "CBOE official delayed quote JSON"
+PROVIDER_CBOE_CSV = "CBOE official daily CSV"
 PROVIDER_EM = "EastMoney push2delay quote API"
 ACTIVE_MAX_AGE_MINUTES = 30
 CLOSED_MAX_AGE_HOURS = 24 * 7
@@ -67,7 +68,8 @@ SINA_HEADERS = {
     "Referer": "https://finance.sina.com.cn/",
 }
 EM_URL = "https://push2delay.eastmoney.com/api/qt/stock/get?secid={secid}&fltt=2&invt=2&fields=f43,f44,f45,f46,f57,f58,f60,f86"
-CBOE_VIX_URL = "https://cdn.cboe.com/api/global/us_indices/daily_prices/VIX_History.csv"
+CBOE_VIX_QUOTE_URL = "https://cdn.cboe.com/api/global/delayed_quotes/quotes/_VIX.json"
+CBOE_VIX_HISTORY_URL = "https://cdn.cboe.com/api/global/us_indices/daily_prices/VIX_History.csv"
 
 
 def now_bjt() -> dt.datetime:
@@ -260,9 +262,43 @@ def fetch_spot_gold(run_started_at: dt.datetime) -> dict:
     }
 
 
-def fetch_cboe_vix(run_started_at: dt.datetime) -> dict:
-    """CBOE 官方 VIX 日线 CSV。取最后两行 CLOSE 作为最新收盘与昨收。"""
-    text = http_text(CBOE_VIX_URL, timeout=15)
+def fetch_cboe_vix_quote(run_started_at: dt.datetime) -> dict:
+    """CBOE 官方实时延时报价 JSON。收盘（16:15 ET）后立即带最新收盘值，
+    避免历史 CSV 每日发布滞后（约收盘后 5 小时、晚于 08:20 采集）导致 VIX 落后价格指数一个交易日。"""
+    payload = json.loads(http_text(CBOE_VIX_QUOTE_URL, timeout=15))
+    data = payload.get("data") or {}
+    price = finite_number(data.get("current_price"))
+    if price is None or price <= 0:
+        price = finite_number(data.get("close"))
+    change = finite_number(data.get("price_change"))
+    if price is None or price <= 0 or change is None:
+        raise RuntimeError("CBOE VIX 实时报价字段无效")
+    # prev_day_close 字段实测会镜像 close（不可信），改由 current_price - price_change 推导昨收。
+    previous_close = price - change
+    if previous_close <= 0:
+        raise RuntimeError("CBOE VIX 实时报价昨收无效")
+    raw_time = str(data.get("last_trade_time") or "").strip()
+    if not raw_time:
+        raise RuntimeError("CBOE VIX 实时报价缺 last_trade_time")
+    try:
+        naive = dt.datetime.strptime(raw_time, "%Y-%m-%dT%H:%M:%S")
+    except ValueError as exc:
+        raise RuntimeError("CBOE VIX 实时报价时间无效") from exc
+    quote_time = naive.replace(tzinfo=NY_TZ).astimezone(BRIEF_TZ)
+    quote_date = naive.date()
+    state = index_state(quote_time, run_started_at)
+    check_freshness(run_started_at, quote_time, state, "恐慌指数(VIX)")
+    return make_row(
+        "^VIX", "^VIX", "恐慌指数", "index", price, previous_close, quote_time,
+        quote_date.isoformat(), state, "较前收盘", PROVIDER_CBOE,
+        "delayed_quotes _VIX.json current_price（昨收=current_price-price_change）",
+    )
+
+
+def fetch_cboe_vix_history(run_started_at: dt.datetime) -> dict:
+    """CBOE 官方 VIX 日线 CSV 兜底。取最后两行 CLOSE 作为最新收盘与昨收；
+    发布滞后时会落后价格指数一个交易日，由上层 VIX 滞后校验容错。"""
+    text = http_text(CBOE_VIX_HISTORY_URL, timeout=15)
     rows = [line.strip() for line in text.splitlines() if line.strip() and not line.startswith("DATE,")]
     if len(rows) < 2:
         raise RuntimeError("CBOE VIX CSV 数据不足")
@@ -282,8 +318,21 @@ def fetch_cboe_vix(run_started_at: dt.datetime) -> dict:
     check_freshness(run_started_at, quote_time, state, "恐慌指数(VIX)")
     return make_row(
         "^VIX", "^VIX", "恐慌指数", "index", price, previous_close, quote_time,
-        quote_date.isoformat(), state, "较前收盘", PROVIDER_CBOE, "VIX_History.csv CLOSE",
+        quote_date.isoformat(), state, "较前收盘", PROVIDER_CBOE_CSV, "VIX_History.csv CLOSE",
     )
+
+
+def fetch_cboe_vix(run_started_at: dt.datetime) -> dict:
+    """VIX 优先取实时延时报价 JSON（无滞后）；失败时退回历史 CSV 兜底。"""
+    try:
+        return fetch_cboe_vix_quote(run_started_at)
+    except Exception as primary_exc:
+        try:
+            return fetch_cboe_vix_history(run_started_at)
+        except Exception as fallback_exc:
+            raise RuntimeError(
+                "CBOE VIX 实时源与历史源均失败：%s ／ %s" % (primary_exc, fallback_exc)
+            ) from fallback_exc
 
 
 def fetch_eastmoney(secid: str, name: str, kind: str, run_started_at: dt.datetime) -> dict:

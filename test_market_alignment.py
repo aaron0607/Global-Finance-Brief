@@ -59,6 +59,55 @@ class ClosedIndexAlignmentTests(unittest.TestCase):
         self.assertIn("晚于", result["errors"][0]["error"])
 
 
+class CboeVixQuoteTests(unittest.TestCase):
+    RUN = dt.datetime(2026, 9, 11, 8, 20, tzinfo=fetch_market.BRIEF_TZ)
+    QUOTE_JSON = json.dumps({
+        "data": {
+            "symbol": "^VIX",
+            "current_price": 17.84,
+            "close": 17.84,
+            "price_change": 1.38,
+            "price_change_percent": 7.7354,
+            "prev_day_close": 17.84,  # 实测镜像 close，不可信
+            "last_trade_time": "2026-09-10T16:15:01",
+        },
+        "symbol": "_VIX",
+    })
+    HISTORY_CSV = "DATE,OPEN,HIGH,LOW,CLOSE\n09/09/2026,15.65,16.68,15.57,16.46\n09/10/2026,16.31,18.17,16.29,17.84\n"
+
+    def test_quote_parses_price_prevclose_and_session(self):
+        with mock.patch.object(fetch_market, "http_text", return_value=self.QUOTE_JSON):
+            row = fetch_market.fetch_cboe_vix(self.RUN)
+        self.assertEqual(row["price_raw"], 17.84)
+        # 昨收由 current_price - price_change 推导（16.46 = 9/09 收盘），不取不可信的 prev_day_close
+        self.assertEqual(row["reference_price_raw"], 16.46)
+        self.assertEqual(row["chg"], "+8.38%")
+        self.assertEqual(row["session_date"], "2026-09-10")
+        self.assertEqual(row["provider"], fetch_market.PROVIDER_CBOE)
+
+    def test_quote_failure_falls_back_to_history_csv(self):
+        def side_effect(url, *args, **kwargs):
+            if url == fetch_market.CBOE_VIX_QUOTE_URL:
+                raise RuntimeError("模拟实时源不可用")
+            return self.HISTORY_CSV
+        with mock.patch.object(fetch_market, "http_text", side_effect=side_effect):
+            row = fetch_market.fetch_cboe_vix(self.RUN)
+        self.assertEqual(row["price_raw"], 17.84)
+        self.assertEqual(row["session_date"], "2026-09-10")
+        self.assertEqual(row["provider"], fetch_market.PROVIDER_CBOE_CSV)
+
+    def test_both_sources_failing_raises(self):
+        with mock.patch.object(fetch_market, "http_text", side_effect=RuntimeError("网络失败")):
+            with self.assertRaises(RuntimeError):
+                fetch_market.fetch_cboe_vix(self.RUN)
+
+    def test_invalid_quote_fields_are_rejected(self):
+        bad = json.dumps({"data": {"current_price": 0, "price_change": None}})
+        with mock.patch.object(fetch_market, "http_text", return_value=bad):
+            with self.assertRaises(RuntimeError):
+                fetch_market.fetch_cboe_vix_quote(self.RUN)
+
+
 class BuildSnapshotAuditTests(unittest.TestCase):
     def test_public_data_source_label_matches_current_providers(self):
         self.assertNotIn("Yahoo Finance", build_brief.PUBLIC_DATA_SOURCES)
