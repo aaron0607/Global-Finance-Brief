@@ -4,12 +4,14 @@ import re
 from unittest.mock import patch
 
 from write_brief import (
+    MIN_BULLET_CHARS,
     NORMAL_PROFILE,
     THIN_PROFILE,
     WEEKDAYS,
     _expected_prev_us_session,
     build_prompt,
     build_repair_prompt,
+    compress_bullets,
     ensure_length_floors,
     ensure_main_title,
     ensure_note_floor,
@@ -432,6 +434,84 @@ class DeterministicNormalizerTests(unittest.TestCase):
         # 空段不凭空造整段，交给结构校验拦截
         self.assertEqual(ensure_length_floors(content), 0)
         self.assertEqual(content["sections"][0]["bullets"][0], "")
+
+
+class CompressBulletsTests(unittest.TestCase):
+    """超限侧确定性压缩：删冗余衔接/解读句，保数字/强调色/首句/下限，幂等。"""
+
+    def _doc(self):
+        fact = "关键指标升至[[c:4.99%]]并被市场充分定价，成为核心变量。"
+        fill = "这一趋势反映了当前市场结构性的深层变化并值得持续关注其演进。"
+        head = "产业主线出现明确信号，盘面给出同向印证并形成合力。"
+        tail = "后续仍需以关键数据与盘面反应作为验证条件。"
+        bullet = head + fact + fact + fill + fill + fill + tail
+        return {"sections": [
+            {"id": "focus", "bullets": [bullet, bullet, bullet, bullet]},
+            {"id": "ai_tech", "bullets": [bullet, bullet, bullet, bullet]},
+            {"id": "macro", "bullets": [bullet, bullet, bullet]},
+        ]}
+
+    @staticmethod
+    def _emphasis(content):
+        txt = "".join(b for s in content["sections"] for b in s["bullets"])
+        return re.findall(r"\[\[.+?\]\]", txt)
+
+    @staticmethod
+    def _digits(content):
+        txt = "".join(b for s in content["sections"] for b in s["bullets"])
+        return re.findall(r"\d", txt)
+
+    def test_noop_when_within_range(self):
+        content = self._doc()
+        self.assertEqual(compress_bullets(content, 0), 0)
+        self.assertEqual(compress_bullets(content, -50), 0)
+
+    def test_cuts_at_least_requested(self):
+        content = self._doc()
+        before = sum(visible_text_length(b) for s in content["sections"] for b in s["bullets"])
+        removed = compress_bullets(content, 200, MIN_BULLET_CHARS)
+        after = sum(visible_text_length(b) for s in content["sections"] for b in s["bullets"])
+        self.assertGreaterEqual(removed, 200)
+        self.assertEqual(before - after, removed)
+
+    def test_preserves_facts_and_emphasis(self):
+        content = self._doc()
+        emp_before, dig_before = self._emphasis(content), self._digits(content)
+        compress_bullets(content, 200, MIN_BULLET_CHARS)
+        # 数字与强调色 span 一字不少
+        self.assertEqual(self._emphasis(content), emp_before)
+        self.assertEqual(self._digits(content), dig_before)
+
+    def test_keeps_first_sentence_and_floor(self):
+        content = self._doc()
+        compress_bullets(content, 300, MIN_BULLET_CHARS)
+        for section in content["sections"]:
+            floor = MIN_BULLET_CHARS[section["id"]]
+            for bullet in section["bullets"]:
+                self.assertTrue(bullet.startswith("产业主线出现明确信号"))
+                self.assertGreaterEqual(visible_text_length(bullet), floor)
+
+    def test_only_touches_bullets(self):
+        content = self._doc()
+        content["alert"] = "导读" + "字" * 200
+        content["logic_chain"] = {"priority": "利率主线不变。这一判断值得关注。"}
+        content["sections"][0]["note"] = "本节结论。这一趋势值得关注。"
+        alert0, prio0, note0 = content["alert"], content["logic_chain"]["priority"], content["sections"][0]["note"]
+        compress_bullets(content, 200, MIN_BULLET_CHARS)
+        self.assertEqual(content["alert"], alert0)
+        self.assertEqual(content["logic_chain"]["priority"], prio0)
+        self.assertEqual(content["sections"][0]["note"], note0)
+
+    def test_idempotent_second_pass_when_exhausted(self):
+        content = self._doc()
+        compress_bullets(content, 100000, MIN_BULLET_CHARS)  # 尽量删
+        snapshot = [list(s["bullets"]) for s in content["sections"]]
+        compress_bullets(content, 100000, MIN_BULLET_CHARS)  # 再删：无可删句
+        self.assertEqual([list(s["bullets"]) for s in content["sections"]], snapshot)
+
+    def test_short_bullet_untouched(self):
+        content = {"sections": [{"id": "macro", "bullets": ["只有一句话的短段。"]}]}
+        self.assertEqual(compress_bullets(content, 50, MIN_BULLET_CHARS), 0)
 
 
 if __name__ == "__main__":

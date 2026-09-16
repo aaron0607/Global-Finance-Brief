@@ -126,6 +126,16 @@ BULLET_FLOOR_SUFFIXES = {
 DEFAULT_BULLET_SUFFIX = "后续仍需持续跟踪相关数据与盘面能否相互验证。"
 ALERT_FLOOR_SUFFIX = "后续以关键数据、利率与盘面反应作为验证。"
 
+# ── 超限侧确定性压缩 ──────────────────────────────────────
+# 对称于偏短侧的 ensure_length_floors / 超长着色的 trim_long_emphasis：
+# 模型在硬上限附近反复微调、连续 6 次收敛不进区间时（2026-09-16 顽疾，与
+# 09-08/09-09 同源，只是发生在上边界），作为最后兜底删除板块 bullet 中
+# “既无数字也无强调色”的纯衔接/解读冗余句，把整稿压回硬区间内部。
+# 只保留每条首句(主题)与全部含数字/强调色的句子，可见正文里的事实、数字、
+# 机构观点与多空方向因此原样保留，仅去掉重复背景与软性过渡。
+COMPRESS_MARGIN = 40        # 压到 hard_max - 余量，落在区间内部而非贴边
+OVERSHOOT_TOLERANCE = 400   # 仅当超出硬上限 <= 该值才自动压缩，过多则交人工复核
+
 
 def now_bjt() -> dt.datetime:
     return dt.datetime.now(BRIEF_TZ).replace(microsecond=0)
@@ -627,6 +637,79 @@ def visible_text_length(text: str) -> int:
     return len(text)
 
 
+def _split_sentences(text: str) -> list[str]:
+    """按中文句末标点切句并保留标点。bullet 为单行纯文本，无 <br>。"""
+    return [t for t in re.split(r"(?<=[。！？])", text) if t]
+
+
+def _sentence_has_fact(sentence: str) -> bool:
+    """含数字或强调色的句子视为事实/关键结论，压缩时绝不删除。"""
+    return bool(re.search(r"\d", sentence) or re.search(r"\[\[(?:red|green|c):", sentence))
+
+
+def compress_bullets(content: dict, need_cut: int, min_bullet_chars: dict | None = None) -> int:
+    """确定性压缩：删除板块 bullet 中“既无数字也无强调色”的冗余句，返回删除的可见字数。
+
+    安全约束：只动 sections[].bullets（不碰 alert / logic_chain / note / 标题 / 日历 / 来源）；
+    每条 bullet 保留首句与全部含数字或强调色的句子，只删中间/末尾的纯衔接或解读句，
+    首句永不删，且至少保留两句、不低于板块字数下限。可见正文里的所有事实、数字、机构
+    观点与多空方向因此原样保留，仅去掉重复背景与软性过渡。分两轮：先删中间句（保护结论
+    末句），仍不足再允许删末句。幂等：无可删句或已在区间内时返回 0。"""
+    if need_cut <= 0:
+        return 0
+    min_bullet_chars = min_bullet_chars or MIN_BULLET_CHARS
+    removed = 0
+    sections = [s for s in content.get("sections", [])
+                if isinstance(s, dict) and isinstance(s.get("bullets"), list)]
+
+    def sec_size(sec):
+        return sum(visible_text_length(b) for b in sec["bullets"] if isinstance(b, str))
+
+    for allow_last in (False, True):  # 优先删中间句，第二轮才允许删末句(结论)
+        if removed >= need_cut:
+            break
+        for section in sorted(sections, key=sec_size, reverse=True):
+            if removed >= need_cut:
+                break
+            floor = min_bullet_chars.get(section.get("id"), 0)
+            order = sorted(
+                range(len(section["bullets"])),
+                key=lambda i: (visible_text_length(section["bullets"][i])
+                               if isinstance(section["bullets"][i], str) else 0),
+                reverse=True,
+            )
+            for i in order:
+                if removed >= need_cut:
+                    break
+                bullet = section["bullets"][i]
+                if not isinstance(bullet, str):
+                    continue
+                keep = _split_sentences(bullet)
+                if len(keep) <= 2:
+                    continue
+                last_idx = len(keep) - 1
+                for j in range(last_idx, 0, -1):  # 首句(0)永不删
+                    if removed >= need_cut:
+                        break
+                    if j == last_idx and not allow_last:
+                        continue
+                    s = keep[j]
+                    if s is None or _sentence_has_fact(s):
+                        continue
+                    alive = [k for k in keep if k]
+                    if len(alive) <= 2:  # 至少保留两句
+                        break
+                    cand = visible_text_length(s)
+                    if visible_text_length("".join(alive)) - cand < floor:
+                        continue  # 不得低于板块字数下限
+                    keep[j] = None
+                    removed += cand
+                new_bullet = "".join(k for k in keep if k)
+                if new_bullet != bullet:
+                    section["bullets"][i] = new_bullet
+    return removed
+
+
 def _calendar_keywords(event: str) -> list[str]:
     """从事件名提取候选关键词：前缀 + 剥掉"二季度财报/财报/报告/数据"等后缀的实体名。"""
     kws = set()
@@ -1053,6 +1136,7 @@ def main() -> int:
     wrote_candidate = False
     candidate = None
     best_degraded = None  # (count, content)：结构全过、仅整稿略短于硬下限的最佳候选
+    best_overshoot = None  # (count, content)：结构全过、build rc=0，仅整稿略高于硬上限的最佳候选
     for attempt in range(1, MAX_ATTEMPTS + 1):
         action = "生成初稿" if candidate is None else "定向修复"
         print("写稿尝试 %d/%d（%s）..." % (attempt, MAX_ATTEMPTS, action), file=sys.stderr)
@@ -1118,6 +1202,9 @@ def main() -> int:
         # 结构/时效/日历/强调色全过、build rc=0，仅整稿略短于硬下限——记为降级放行候选（取最长者）
         if profile["accept_min"] <= count < hmin and (best_degraded is None or count > best_degraded[0]):
             best_degraded = (count, content)
+        # 仅整稿略高于硬上限——记为确定性压缩候选（取最接近上限者，尽量少删）
+        if hmax < count <= hmax + OVERSHOOT_TOLERANCE and (best_overshoot is None or count < best_overshoot[0]):
+            best_overshoot = (count, content)
         delta = tmax - count
         direction = "增加" if delta > 0 else "减少"
         section_counts = parse_section_counts(out)
@@ -1137,6 +1224,26 @@ def main() -> int:
                     % (count, direction, abs(delta), tmin, tmax,
                        section_counts, adjustment))
         print("  字数 %s，重试" % ("偏少" if delta > 0 else "超限"), file=sys.stderr)
+
+    # 超限侧确定性压缩兜底：模型在硬上限附近反复不收敛时，删除冗余衔接/解读句压回区间。
+    # 压缩后落入 [hard_min, hard_max] 即完全合规（区别于偏短侧的降级放行），返回 0。
+    if best_overshoot is not None:
+        count, content = best_overshoot
+        hmin, hmax = profile["hard_min"], profile["hard_max"]
+        removed = compress_bullets(content, count - (hmax - COMPRESS_MARGIN),
+                                   profile["min_bullet_chars"])
+        if removed > 0:
+            write_content(BASE / ("content_%s.json" % day), content)
+            rc, out = run_build(day)
+            new_count = parse_count(out)
+            if rc == 0 and new_count is not None and hmin <= new_count <= hmax:
+                print("⚠️ 确定性压缩：正文由 %d 字精简至 %d 字（删除 %d 可见字的冗余衔接/解读句，"
+                      "保留全部数字、强调色与观点方向），已写入正式 content_%s.json 继续构建发布。"
+                      % (count, new_count, removed, day), file=sys.stderr)
+                print("✓ 写稿完成（超限侧确定性压缩）：content_%s.json" % day)
+                return 0
+            print("⚠️ 确定性压缩后仍未落入硬区间（%s 字，build rc=%s），转人工复核。"
+                  % (new_count, rc), file=sys.stderr)
 
     if best_degraded is not None:
         count, content = best_degraded
