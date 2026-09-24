@@ -110,7 +110,7 @@
 
 ## 行情数据源
 
-- `fetch_market.py` 是行情唯一写入入口，不依赖 Yahoo/yfinance；当前新浪、东方财富和 CBOE 的逐项映射及新鲜度口径见 `README.md`「行情口径」。
+- `fetch_market.py` 是行情唯一写入入口，不依赖 yfinance；除 VIX 外不使用 Yahoo。VIX 为 Yahoo chart 优先、CBOE 兜底（服务器 IP 常被 Yahoo 429，届时自动走 CBOE）；当前新浪、东方财富、Yahoo 和 CBOE 的逐项映射及新鲜度口径见 `README.md`「行情口径」。
 - 东方财富请求必须使用 `push2delay` 延时主机，禁止换成易限流空响应的 `push2`；东财失败时仅允许退回脚本内置的新浪兜底代码（`hf_OIL` / `globalbd_us10yt` / `DINIW`）；任何核心标的缺失或错位都应硬失败，不得从新闻或旧快照补值。
 
 ## 服务器定时运行

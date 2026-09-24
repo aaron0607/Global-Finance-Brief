@@ -1,5 +1,12 @@
 # 变更记录
 
+## 2026-09-24 · VIX 改为 Yahoo 优先、CBOE 两级兜底
+
+- **现象**：北京时间 09-24 22:54 采集时，CBOE 实时延时报价 JSON（`_VIX.json`）的 `last_trade_time` 仍停在 `2026-09-22T16:15:01`，快照 VIX=14.21 落后价格指数两个交易日（age 2559 分钟）；因在 ≤3 自然日滞后容忍内，快照仍判 valid，读者看到的是旧值。同时 Yahoo `^VIX` 连续 5 次 HTTP 200，盘中值 15.68、前收 15.18。
+- **修复**：`fetch_market.py` 新增 `fetch_yahoo_vix()` 与 `fetch_vix()` 调度：Yahoo chart API 优先（`regularMarketPrice` 为最新价、`previousClose` 为昨收、`regularMarketTime` 定报价时间与纽约交易日，校验返回标的必须是 `^VIX`）；Yahoo 任何失败（含 429、空结果、盘中延迟 >30 分钟被新鲜度校验拒绝）即 stderr 告警并退回原有 CBOE JSON → CBOE CSV 链路，三源全挂才硬失败。`CORE` 中 VIX 源类型由 `cboe` 改为 `vix`。`provider` 记为 `Yahoo Finance chart API (^VIX)` 便于审计。
+- **影响**：本机/可达 Yahoo 的环境 VIX 与价格指数同日对齐且盘中实时；生产服务器（腾讯云 IP，2026-09-11 实测 Yahoo 429）预计仍走 CBOE 兜底，每次多一次约秒级失败请求，行为与此前一致——CBOE JSON 停更问题在服务器侧未解决，仍由 VIX 滞后校验容错并在表头标注"VIX截至X月X日"。成稿页脚数据来源文案不变（VIX 本身由 CBOE 编制）。
+- **回归**：`test_market_alignment.py` 新增 5 项（Yahoo 优先解析、Yahoo 429 退 CBOE、盘中陈旧报价退 CBOE、标的错位/空结果拦截、三源全挂抛错），全套 27 项通过；`test_calendar.py` 22 项、`test_write_brief.py` 52 项通过。真实采集生成 valid 快照，VIX=15.75/+3.75%/session 2026-09-24，provider=Yahoo。
+
 ## 2026-09-24 · 布油/美债/美元指数增加新浪兜底：东财封禁服务器 IP
 
 - **线上现象**：`20260924` 08:20 服务器任务报"行情获取失败"：`BZ=F` / `^TNX` / `DX-Y.NYB` 三项均为 `Remote end closed connection without response`，重试一次仍失败，写入 invalid 快照后终止。其余标的（新浪、CBOE）正常。

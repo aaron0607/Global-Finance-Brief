@@ -85,7 +85,7 @@ python3 -m venv .venv
 
 ## 行情口径
 
-`fetch_market.py` 使用国内可直连的结构化行情源生成快照（2026-08-06 起免 VPN，不依赖 yfinance/Yahoo）：美股指数/个股用新浪 `gb_$`（`gb_$inx`/`gb_$sox` 等）；黄金/美元现货用新浪 `hf_XAU`；布伦特原油、10 年美债收益率、美元指数用东方财富 `push2delay`（`112.B00Y` / `171.US10Y` / `100.UDI`），东财不可达时逐项退回新浪 `hf_OIL` / `globalbd_us10yt` / `DINIW`（东财会对部分云服务器 IP 直接断开 TLS）；恐慌指数用 CBOE 官方实时延时报价 JSON（`delayed_quotes/quotes/_VIX.json`，收盘即有值，避免历史日线 CSV 发布滞后一日；实时源异常时退回 `VIX_History.csv` 兜底）。每项都记录 ticker、报价时间、市场状态、前收盘/前结算参考价和数据来源。交易时段内报价延迟超过 30 分钟、休市报价超过 7 天或任一核心标的缺数时，脚本会写入无效快照并阻止构建。新简报禁止在 content JSON 手填行情，也禁止从新闻、搜索摘要或截图补价。
+`fetch_market.py` 使用国内可直连的结构化行情源生成快照（2026-08-06 起免 VPN，不依赖 yfinance；仅 VIX 优先尝试 Yahoo）：美股指数/个股用新浪 `gb_$`（`gb_$inx`/`gb_$sox` 等）；黄金/美元现货用新浪 `hf_XAU`；布伦特原油、10 年美债收益率、美元指数用东方财富 `push2delay`（`112.B00Y` / `171.US10Y` / `100.UDI`），东财不可达时逐项退回新浪 `hf_OIL` / `globalbd_us10yt` / `DINIW`（东财会对部分云服务器 IP 直接断开 TLS）；恐慌指数优先用 Yahoo Finance chart `^VIX`（`query1.finance.yahoo.com/v8/finance/chart/%5EVIX`，盘中约 15 分钟延时、收盘即有值；取 `meta.regularMarketPrice` / `previousClose` / `regularMarketTime`），Yahoo 任何失败（服务器 IP 常见 429）或未过新鲜度校验时退回 CBOE 官方实时延时报价 JSON（`delayed_quotes/quotes/_VIX.json`），再异常退回 `VIX_History.csv`。每项都记录 ticker、报价时间、市场状态、前收盘/前结算参考价和数据来源。交易时段内报价延迟超过 30 分钟、休市报价超过 7 天或任一核心标的缺数时，脚本会写入无效快照并阻止构建。新简报禁止在 content JSON 手填行情，也禁止从新闻、搜索摘要或截图补价。
 
 客户成稿只呈现市场事实、公开数据口径和投资解读，不披露脚本、快照文件、内部文档或后台运行机制。行情总览只显示资产名称、价格和涨跌：指数表头显示实际最近交易日的“X月X日收盘”，大宗/外汇表头显示该组最新有效报价的北京时间日期“X月X日”。两组日期独立更新；周末或休市时沿用最近实际行情日期，不随简报日期自动推进。大宗/外汇表不展示 ticker、逐行报价时间、交易状态或表下行情口径说明，这些审计字段仍完整保留在快照和构建校验中。
 
