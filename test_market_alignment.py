@@ -108,6 +108,42 @@ class CboeVixQuoteTests(unittest.TestCase):
                 fetch_market.fetch_cboe_vix_quote(self.RUN)
 
 
+class EastMoneySinaFallbackTests(unittest.TestCase):
+    RUN = dt.datetime(2026, 9, 24, 8, 55, tzinfo=fetch_market.BRIEF_TZ)
+    SINA = {
+        "hf_OIL": "97.400,,97.400,97.420,98.090,97.310,08:50:51,98.120,98.060,0,2,1,2026-09-24,布伦特原油,2505".split(","),
+        "DINIW": "08:51:03,101.2159,101.2159,101.1277,1353,101.1311,101.2159,101.0806,101.2159,美元指数,2026-09-24".split(","),
+        "globalbd_us10yt": "美国10年期国债,5.108,5.104,5.124,5.125,5.106,0,0.3961,0.0202,0,0,1790211050,2026-09-23,20:50:50,2036-08-15,4.625,1年2次,96.160,美国".split(","),
+    }
+
+    def fetch(self, symbol):
+        _, name, kind, source = next(row for row in fetch_market.CORE if row[0] == symbol)
+        with mock.patch.object(fetch_market, "http_text", side_effect=OSError("unexpected eof")), \
+                mock.patch.object(fetch_market, "sina_fields", side_effect=lambda code: self.SINA[code]), \
+                contextlib.redirect_stderr(io.StringIO()):
+            return fetch_market.fetch_one(symbol, name, kind, source, self.RUN)
+
+    def test_eastmoney_failure_falls_back_to_sina(self):
+        brent = self.fetch("BZ=F")
+        self.assertEqual((brent["price"], brent["chg"], brent["symbol"]), ("97.40", "-0.73%", "hf_OIL"))
+        dxy = self.fetch("DX-Y.NYB")
+        self.assertEqual((dxy["price"], dxy["chg"]), ("101.22", "+0.09%"))
+        tnx = self.fetch("^TNX")
+        self.assertEqual((tnx["price"], tnx["chg"]), ("5.12%", "+2.0 bp"))
+        self.assertEqual(tnx["quote_time"][:16], "2026-09-24T08:50")
+        for row in (brent, dxy, tnx):
+            self.assertEqual(row["market_state"], "交易中")
+            self.assertIn("EastMoney fallback", row["provider"])
+
+    def test_both_sources_failing_raises(self):
+        _, name, kind, source = next(row for row in fetch_market.CORE if row[0] == "BZ=F")
+        with mock.patch.object(fetch_market, "http_text", side_effect=OSError("eof")), \
+                mock.patch.object(fetch_market, "sina_fields", side_effect=RuntimeError("新浪空")), \
+                contextlib.redirect_stderr(io.StringIO()):
+            with self.assertRaisesRegex(RuntimeError, "新浪兜底失败"):
+                fetch_market.fetch_one("BZ=F", name, kind, source, self.RUN)
+
+
 class BuildSnapshotAuditTests(unittest.TestCase):
     def test_public_data_source_label_matches_current_providers(self):
         self.assertNotIn("Yahoo Finance", build_brief.PUBLIC_DATA_SOURCES)

@@ -6,9 +6,10 @@
 数据源（全部为国内可直连、无需 VPN 的固定链接）：
 - 美股指数/个股：新浪 hq  `gb_$inx` / `gb_$ixic` / `gb_$dji` / `gb_$sox` / `gb_nvda` ...
 - 黄金/美元：新浪 hq `hf_XAU`（伦敦现货 XAU/USD）
-- 布伦特原油：东方财富 push2delay `112.B00Y`（当月连续）
-- 10年美债收益率：东方财富 push2delay `171.US10Y`
-- 美元指数：东方财富 push2delay `100.UDI`
+- 布伦特原油：东方财富 push2delay `112.B00Y`（当月连续），失败时退回新浪 `hf_OIL`
+- 10年美债收益率：东方财富 push2delay `171.US10Y`，失败时退回新浪 `globalbd_us10yt`
+- 美元指数：东方财富 push2delay `100.UDI`，失败时退回新浪 `DINIW`
+  （东财会对部分云服务器 IP 直接断开 TLS 连接，新浪兜底保证服务器可取数）
 - 恐慌指数 VIX：CBOE 官方日线 CSV（cdn.cboe.com，每日收盘）
 
 口径与校验逻辑与原 yfinance 版本保持一致：run_started_at 在脚本真正开始时固化、
@@ -40,13 +41,14 @@ PROVIDER_GOLD = "Sina Finance hq (hf_XAU)"
 PROVIDER_CBOE = "CBOE official delayed quote JSON"
 PROVIDER_CBOE_CSV = "CBOE official daily CSV"
 PROVIDER_EM = "EastMoney push2delay quote API"
+PROVIDER_SINA_FALLBACK = "Sina Finance hq (%s, EastMoney fallback)"
 ACTIVE_MAX_AGE_MINUTES = 30
 CLOSED_MAX_AGE_HOURS = 24 * 7
 ACTIVE_STATES = {"盘前", "交易中", "盘后"}
 
 # (logical_symbol, 展示名, 资产类型, 数据源)
 # 数据源格式: ("sina", "gb_$inx") | ("sina", "gb_<ticker>") | ("sina_hf", "hf_XAU")
-#             | ("eastmoney", "<secid>") | ("cboe", None)
+#             | ("eastmoney", "<secid>", "<新浪兜底代码>") | ("cboe", None)
 CORE = [
     ("^GSPC", "标普500", "index", ("sina", "gb_$inx")),
     ("^IXIC", "纳斯达克综合", "index", ("sina", "gb_$ixic")),
@@ -54,9 +56,9 @@ CORE = [
     ("^SOX", "费城半导体", "index", ("sina", "gb_$sox")),
     ("^VIX", "恐慌指数", "index", ("cboe", None)),
     ("XAUUSD", "黄金/美元", "spot_gold", ("sina_hf", "hf_XAU")),
-    ("BZ=F", "ICE布伦特原油期货", "commodity", ("eastmoney", "112.B00Y")),
-    ("^TNX", "10年美债收益率指数", "yield", ("eastmoney", "171.US10Y")),
-    ("DX-Y.NYB", "ICE美元指数", "fx", ("eastmoney", "100.UDI")),
+    ("BZ=F", "ICE布伦特原油期货", "commodity", ("eastmoney", "112.B00Y", "hf_OIL")),
+    ("^TNX", "10年美债收益率指数", "yield", ("eastmoney", "171.US10Y", "globalbd_us10yt")),
+    ("DX-Y.NYB", "ICE美元指数", "fx", ("eastmoney", "100.UDI", "DINIW")),
 ]
 INDEX_SYMS = [symbol for symbol, _, kind, _ in CORE if kind == "index"]
 PRICE_INDEX_SYMS = ["^GSPC", "^IXIC", "^DJI", "^SOX"]
@@ -358,6 +360,54 @@ def fetch_eastmoney(secid: str, name: str, kind: str, run_started_at: dt.datetim
     )
 
 
+def sina_fields(code: str) -> list[str]:
+    request = urllib.request.Request("https://hq.sinajs.cn/list=" + code, headers=SINA_HEADERS)
+    with urllib.request.urlopen(request, timeout=12) as response:
+        text = response.read().decode("gb18030", "ignore")
+    match = re.search(r'hq_str_%s="([^"]*)"' % re.escape(code), text)
+    if not match or not match.group(1):
+        raise RuntimeError("新浪 %s 返回为空" % code)
+    return match.group(1).split(",")
+
+
+def fetch_sina_fallback(code: str, name: str, kind: str, run_started_at: dt.datetime) -> dict:
+    """东财不可达时的新浪兜底：
+    hf_OIL          [0]最新 [7]昨结 [12]日期+[6]时间（北京）
+    DINIW           [1]最新 [3]昨收 [10]日期+[0]时间（北京）
+    globalbd_us10yt [3]最新收益率 [2]昨收 [11]Unix时间戳
+    """
+    fields = sina_fields(code)
+    try:
+        if code == "hf_OIL":
+            price, previous_close, field = finite_number(fields[0]), finite_number(fields[7]), "hf_OIL[0]（昨结=[7]）"
+            quote_time = dt.datetime.strptime("%s %s" % (fields[12].strip(), fields[6].strip()),
+                                              "%Y-%m-%d %H:%M:%S").replace(tzinfo=BRIEF_TZ)
+        elif code == "DINIW":
+            price, previous_close, field = finite_number(fields[1]), finite_number(fields[3]), "DINIW[1]（昨收=[3]）"
+            quote_time = dt.datetime.strptime("%s %s" % (fields[10].strip(), fields[0].strip()),
+                                              "%Y-%m-%d %H:%M:%S").replace(tzinfo=BRIEF_TZ)
+        elif code == "globalbd_us10yt":
+            price, previous_close, field = finite_number(fields[3]), finite_number(fields[2]), "globalbd_us10yt[3]（昨收=[2]）"
+            ts = finite_number(fields[11])
+            if ts is None:
+                raise ValueError("缺时间戳")
+            quote_time = dt.datetime.fromtimestamp(ts, UTC).astimezone(BRIEF_TZ)
+        else:
+            raise RuntimeError("未知新浪兜底代码 %s" % code)
+    except (IndexError, ValueError) as exc:
+        raise RuntimeError("新浪 %s 字段不完整或时间无效" % code) from exc
+    if price is None or price <= 0 or previous_close is None or previous_close <= 0:
+        raise RuntimeError("新浪 %s 最新价/昨收无效" % code)
+    state = "交易中" if commodity_open(run_started_at) else "休市"
+    check_freshness(run_started_at, quote_time, state, name)
+    session_date = quote_time.astimezone(NY_TZ).date().isoformat()
+    change_basis = "较前结算" if kind == "commodity" else ("较前收盘（基点）" if kind == "yield" else "较前收盘")
+    return make_row(
+        code, code, name, kind, price, previous_close, quote_time,
+        session_date, state, change_basis, PROVIDER_SINA_FALLBACK % code, field,
+    )
+
+
 def validate_closed_index_dates(rows: dict[str, dict]) -> dict:
     price_dates = {rows[symbol]["session_date"] for symbol in PRICE_INDEX_SYMS}
     result = {
@@ -404,7 +454,7 @@ def validate_closed_index_dates(rows: dict[str, dict]) -> dict:
 
 
 def fetch_one(symbol: str, name: str, kind: str, source: tuple, run_started_at: dt.datetime) -> dict:
-    source_type, code = source
+    source_type, code = source[0], source[1]
     if source_type == "sina":
         return fetch_sina_us(code, name, kind, run_started_at)
     if source_type == "sina_hf":
@@ -412,7 +462,16 @@ def fetch_one(symbol: str, name: str, kind: str, source: tuple, run_started_at: 
     if source_type == "cboe":
         return fetch_cboe_vix(run_started_at)
     if source_type == "eastmoney":
-        return fetch_eastmoney(code, name, kind, run_started_at)
+        try:
+            return fetch_eastmoney(code, name, kind, run_started_at)
+        except Exception as exc:  # noqa: BLE001 - 东财任何失败都尝试新浪兜底
+            if len(source) < 3:
+                raise
+            print("! %-10s 东财失败（%s），改用新浪 %s" % (symbol, exc, source[2]), file=sys.stderr)
+            try:
+                return fetch_sina_fallback(source[2], name, kind, run_started_at)
+            except Exception as fallback_exc:  # noqa: BLE001
+                raise RuntimeError("东财失败：%s；新浪兜底失败：%s" % (exc, fallback_exc)) from fallback_exc
     raise RuntimeError("未知数据源类型 %s" % source_type)
 
 
