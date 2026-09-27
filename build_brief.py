@@ -34,8 +34,9 @@ import sys, os, re, json, datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from content_validation import (calendar_summary, emphasis_summary, validate_calendar,
-                                validate_emphasis, validate_no_structure_leaks)
+from content_validation import (apply_name_abbreviations, calendar_summary, emphasis_summary,
+                                name_abbreviation_errors, validate_calendar, validate_emphasis,
+                                validate_no_structure_leaks)
 
 # ---------- 颜色常量(A股惯例:涨红跌绿) ----------
 RED   = "#A32D2D"   # 涨/利多
@@ -337,6 +338,7 @@ def validate_final_render(content, html):
     visible = re.sub(r"<[^>]+>", " ", visible)
     visible = re.sub(r"\s+", " ", visible)
     errors.extend(validate_no_structure_leaks(content, visible))
+    errors.extend(name_abbreviation_errors(visible))
     for pattern, label in FINAL_PLACEHOLDER_PATTERNS:
         if re.search(pattern, visible, re.I):
             errors.append("成稿残留%s" % label)
@@ -746,6 +748,13 @@ def main():
     if len(sys.argv) < 2:
         sys.exit("用法: .venv/bin/python build_brief.py content_YYYYMMDD.json [output.html]")
     content = json.load(open(sys.argv[1], encoding="utf-8"))
+    abbreviated = apply_name_abbreviations(content)
+    if abbreviated != content:
+        # 回写 content，保证发布入口看到的 JSON 与成稿一致
+        content = abbreviated
+        with open(sys.argv[1], "w", encoding="utf-8") as f:
+            json.dump(content, f, ensure_ascii=False, indent=2)
+        print("已按人名简称规则改写 content（如「习近平」→「习」）")
     structure_errors = validate_no_structure_leaks(content)
     if structure_errors:
         sys.exit("✗ 正文结构泄漏校验失败：\n- " + "\n- ".join(structure_errors))

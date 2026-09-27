@@ -18,6 +18,9 @@ COLOR_MARKER_RE = re.compile(r"\[\[(?:red|green|c):(.+?)\]\]")
 COLOR_MARKER_KIND_RE = re.compile(r"\[\[(red|green|c):(.+?)\]\]")
 COLOR_SPAN_MAX = 40
 CORE_SECTIONS = {"focus", "ai_tech"}
+# 客户成稿人名统一简称（用户规定）：写稿、构建时自动替换，发布前终检仍残留则拦截。
+# sources 是来源登记（新闻原标题），不进入成稿正文，保持原样。
+NAME_ABBREVIATIONS = {"习近平": "习"}
 STRUCTURE_LEAK_RE = re.compile(
     r"\{\s*['\"][^'\"\r\n]{1,40}['\"]\s*:"
     r"|['\"]emphasis['\"]\s*:"
@@ -25,6 +28,26 @@ STRUCTURE_LEAK_RE = re.compile(
     r"|<class\s+['\"]",
     re.I,
 )
+
+
+def apply_name_abbreviations(value, _key: str | None = None):
+    """递归替换 content 中所有字符串里的全称为简称（跳过 sources），返回新对象。"""
+    if _key == "sources":
+        return value
+    if isinstance(value, str):
+        for full, short in NAME_ABBREVIATIONS.items():
+            value = value.replace(full, short)
+        return value
+    if isinstance(value, list):
+        return [apply_name_abbreviations(item) for item in value]
+    if isinstance(value, dict):
+        return {k: apply_name_abbreviations(v, k) for k, v in value.items()}
+    return value
+
+
+def name_abbreviation_errors(text: str) -> list[str]:
+    return ["成稿仍含全称「%s」，应写作「%s」" % (full, short)
+            for full, short in NAME_ABBREVIATIONS.items() if full in text]
 
 
 def validate_no_structure_leaks(content: dict, rendered_text: str | None = None) -> list[str]:
