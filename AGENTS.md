@@ -19,16 +19,17 @@
    ```bash
    .venv/bin/python fetch_market.py NVDA AMD AAPL MSFT TSLA META MU  # 行情快照
    .venv/bin/python fetch_views.py > views_feed.txt                  # 最近 3 篇飞书观点
-   .venv/bin/python fetch_news.py           # alphaear + Bloomberg/CNBC RSS + Futu → news_feed.json
+   .venv/bin/python fetch_news.py           # Bloomberg/CNBC RSS + Reuters + Futu + 金十 + 华尔街见闻 + alphaear → news_feed.json
    .venv/bin/python fetch_calendar.py       # 金十日历 + 东方财富日历 → calendar_feed.json
    ```
 
    `fetch_calendar.py` 产出「本周财经日历」候选（见「财经日历数据源」），日历日期一律以它为准，**禁止**凭记忆或新闻推断填写。
-   脚本 `fetch_market.py` 会在真正开始时固化北京时间 `run_started_at`，并更新本目录的 `market_snapshot.json`；行情数据源为国内可直连固定链接（见"行情数据源"），不依赖 VPN。`fetch_news.py` 聚合 alphaear（财联社/华尔街见闻/雪球热榜）、Bloomberg/CNBC RSS 和富途牛牛新闻搜索（futu-news-search，公共 HTTP 接口，无需 OpenD 或鉴权）。
+   脚本 `fetch_market.py` 会在真正开始时固化北京时间 `run_started_at`，并更新本目录的 `market_snapshot.json`；行情数据源为国内可直连固定链接（见"行情数据源"），不依赖 VPN。`fetch_news.py` 聚合 Bloomberg/CNBC RSS、Reuters（官方 news sitemap，Bing News 兜底）、富途牛牛新闻搜索（futu-news-search，公共 HTTP 接口，无需 OpenD 或鉴权）、金十、华尔街见闻美股直播和 alphaear（财联社/华尔街见闻/雪球热榜）。
 2. 采集新闻与观点；行情数值只采用第一步结果。`08:20` 只是定时任务的计划触发时刻，不是内容截止点。以 `market_snapshot.json.run_started_at` 为本次统一 `as_of`，只允许使用 `[as_of-24小时, as_of]` 内发布或更新的新闻。
    - 不得连接、搜索或读取 Gmail 及任何邮件来源；邮件通讯不进入候选池。
    - 仅允许有明确发布时间且带时区的信息进入正文。超过 24 小时、晚于本期截止点、只有日期没有具体时间，或无法确认发布时间的信息一律剔除。
-   - 新闻来源固定使用：**金十数据（jin10）快讯+文章列表+关键词快讯搜索**；**alphaear 脚本聚合** 的财联社/华尔街见闻/雪球热榜和 Bloomberg/CNBC RSS；**富途牛牛 futu-news-search**（`fetch_news.py` 已并入）；**华尔街见闻·美股直播**（`api-one.wallstcn.com/apiv1/content/lives?channel=us-stock-channel`，`fetch_news.py` 已并入）；**Reuters 通过 WebSearch(domain:reuters.com) 限定域名获取**（Reuters 无公开 RSS 且反爬，脚本不抓取）；**财联社深度页 cls.cn/depth?id=1007** 由 WebFetch（走 Anthropic 代理）获取，脚本不直连（有反爬）；**WebSearch** 还用于当日焦点深度事件核验。不使用新浪财经新闻搜索（余额不稳定），不派生代理。
+   - **海外一手媒体优先**：Bloomberg/Reuters/CNBC 为一级来源，优先入池（最多 60/100 席）；富途、金十、华尔街见闻美股直播为二级；财联社/华尔街见闻/雪球热榜为三级。同一事件多源报道时，事实、数字、时间以海外一手媒体为准，国内来源只补充 A 股/港股/国内政策视角。
+   - 新闻来源固定使用：**Bloomberg/CNBC RSS**；**Reuters 官方 news sitemap**（`fetch_news.py` 已并入，不可达时退回 Bing News `site:reuters.com`）；**金十数据（jin10）快讯+文章列表+关键词快讯搜索**；**alphaear 脚本聚合** 的财联社/华尔街见闻/雪球热榜；**富途牛牛 futu-news-search**（`fetch_news.py` 已并入）；**华尔街见闻·美股直播**（`api-one.wallstcn.com/apiv1/content/lives?channel=us-stock-channel`，`fetch_news.py` 已并入）；**WebSearch(domain:reuters.com)** 用于人工流程补充核验 Reuters 原文（文章页反爬，脚本只取 sitemap 标题与时间）；**财联社深度页 cls.cn/depth?id=1007** 由 WebFetch（走 Anthropic 代理）获取，脚本不直连（有反爬）；**WebSearch** 还用于当日焦点深度事件核验。不使用新浪财经新闻搜索（余额不稳定），不派生代理。
    - 搜索全流程最多 5 组（AI/科技与宏观必查，地缘仅有实质进展时查，焦点深挖最多 2 组），同一主题不得换关键词重复搜索。
    - 这 5 组搜索应**一次性并行发出**，不要串行等待。第一阶段搜完筛选后，用一个并行批次拉取 5-8 篇关键文章原文核验。
    - 常规简报不得使用代理继续派生代理。

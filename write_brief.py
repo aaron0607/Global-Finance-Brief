@@ -41,6 +41,14 @@ TARGET_MIN, TARGET_MAX = 6300, 6600
 HARD_MIN, HARD_MAX = 6000, 7000
 WEEKDAYS = ("周一", "周二", "周三", "周四", "周五", "周六", "周日")
 NEWS_CAP = 100
+# 新闻池来源分级：1=海外一手媒体（优先入池）、2=国内实时快讯、3=国内聚合热榜；未登记来源按 3 级。
+# 海外一手最多占 OVERSEAS_CAP 席，为 A 股/国内视角保留余量；二、三级不足时再由剩余海外条目补满。
+SOURCE_TIERS = {
+    "bloomberg": 1, "reuters": 1, "cnbc": 1,
+    "futu-news-search": 2, "jin10-flash": 2, "jin10-news": 2, "wscn-live": 2,
+    "cls": 3, "wallstreetcn": 3, "xueqiu": 3,
+}
+OVERSEAS_CAP = 60
 TITLE_LINE_MAX = 24
 ALERT_MIN, ALERT_MAX = 180, 260
 NOTE_MIN, NOTE_MAX = 30, 100
@@ -160,31 +168,50 @@ def load_snapshot() -> dict:
     return snap
 
 
+def source_tier(source_id: str) -> int:
+    return SOURCE_TIERS.get(source_id or "", 3)
+
+
 def build_news_pool(window_start: dt.datetime, window_end: dt.datetime) -> list[dict]:
-    """读 news_feed.json，过滤到 24h 窗口、去重、截断，返回候选池。"""
+    """读 news_feed.json，过滤到 24h 窗口、去重，按来源分级截断，返回候选池。
+
+    海外一手媒体（Bloomberg/Reuters/CNBC）优先入池、最多 OVERSEAS_CAP 条；其余席位依次给
+    国内实时快讯、国内热榜；仍有空位时再用剩余海外条目补满。池内按（级别, 发布时间倒序）排列。"""
     path = BASE / "news_feed.json"
     if not path.exists():
         sys.exit("✗ 缺 news_feed.json —— 先运行 fetch_news.py")
     feed = json.loads(path.read_text(encoding="utf-8"))
-    seen = set()
-    pool = []
+    candidates = []
     for item in feed.get("items", []):
         published = parse_iso(item.get("published_at"))
         if not published or not (window_start <= published <= window_end):
             continue
-        key = re.sub(r"\s+", "", item.get("title", ""))[:80]
-        if key in seen:
-            continue
-        seen.add(key)
-        pool.append({
+        source_id = item.get("source_id") or ""
+        candidates.append({
             "source_name": item.get("source_name") or item.get("source", "未知"),
-            "source_id": item.get("source_id") or "",
+            "source_id": source_id,
+            "tier": source_tier(source_id),
             "title": (item.get("title") or "").strip()[:160],
             "summary": (item.get("summary") or "").strip()[:220],
             "published_at": published.isoformat(),
+            "_ts": published.timestamp(),
         })
-        if len(pool) >= NEWS_CAP:
-            break
+    candidates.sort(key=lambda it: (it["tier"], -it["_ts"]))
+    seen, unique = set(), []
+    for item in candidates:
+        key = re.sub(r"\s+", "", item["title"])[:80]
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(item)
+    overseas = [it for it in unique if it["tier"] == 1]
+    domestic = [it for it in unique if it["tier"] != 1]
+    pool = overseas[:OVERSEAS_CAP]
+    pool += domestic[:NEWS_CAP - len(pool)]
+    pool += overseas[OVERSEAS_CAP:][:NEWS_CAP - len(pool)]
+    pool.sort(key=lambda it: (it["tier"], -it["_ts"]))
+    for item in pool:
+        del item["_ts"]
     return pool
 
 
@@ -305,7 +332,7 @@ def build_prompt(snap: dict, pool: list[dict], day: str, date_cn: str, alert_tim
     news_lines = []
     for i, item in enumerate(pool, 1):
         text = item["title"] + ("。" + item["summary"] if item["summary"] else "")
-        news_lines.append("[%d] %s | %s" % (i, item["published_at"], text))
+        news_lines.append("[%d] %s | %s | %s" % (i, item["published_at"], item["source_name"], text))
     news_block = "\n".join(news_lines)
 
     views_block = ("\n【你的观点参考】（仅方向观点清单：各主题的多空判断与关注要点。"
@@ -345,9 +372,10 @@ def build_prompt(snap: dict, pool: list[dict], day: str, date_cn: str, alert_tim
    - 黄金由利率预期主导：地缘经"油价→通胀→利率"链条影响黄金（霍尔木兹关闭→油↑→通胀↑→加息预期→实际利率↑→黄金承压；开放→黄金受益），**禁止写"封锁海峡→黄金上行触发器"**这类链条。
    - 美联储路径：中性=年内不降息、乐观=降1次、悲观=加1次；油价回落→CPI降温→加息预期修正。
 10. **时效铁律**：以最近 12 小时为主体、24 小时为上限；**已公布数据（CPI/PPI/NFP 等）不得作为头条/alert 的"最新"事件**，只能作背景引用或列入 calendar 的待发布项；宏观板块须以当日最新角度开篇（利率定价/官员表态/当日数据/前瞻窗口）。**未来日期严禁凭记忆填写**：正文提到的未来数据/事件日期只能来自【本周财经日历】或【新闻池】原文；calendar 字段留空数组，由脚本用结构化日历源回填。
-11. **头号焦点优先级**：AI大模型发布/重大突破 > 芯片/半导体重大事件 > 科技巨头财报 > CEO重磅发言 > 宏观政策 > 地缘（仅战争升级/停火/制裁重大变化级别）。
-12. 字数（最重要）：渲染后正文目标 **{tmin}-{tmax} 字**，硬范围 {hmin}-{hmax}。不要靠增加碎段凑字。**focus 每段 280-360 字，ai_tech 每段 270-350 字，stock_rotation/iran/macro 每段 230-310 字，commodity 两段各 250-320 字**；这里指去掉 `[[c:]]`、`[[red:]]`、`[[green:]]` 和 `**` 后读者实际看到的字数。每段通常 3-5 句，内部顺序为“事实与数字→市场反应/交叉验证→传导逻辑→风险或验证条件”。alert 可见正文 180-240 字，logic_chain 合计 450-650 字，note 40-90 字。无 iran 时，把缺口集中补进 focus 与 ai_tech 的新增论证段。
-13. **编辑感铁律**：板块标题必须写出本节核心矛盾或结论，格式为“板块名 | 结论/反差”，不能只是罗列新闻名词；段落之间用事实推进。同一事实只在最相关板块完整展开，其他板块只写其新增含义，禁止重复背景、万能结论和“短线波动不改长期趋势”式套话。
+11. **海外一手媒体优先**：新闻池中 Bloomberg/Reuters/CNBC 为海外一手媒体（英文原文须准确译成中文，公司名、人名、机构名用通行中文译名）。同一事件多源报道时，事实表述、数字、时间以海外一手媒体为准；国内快讯/热榜与之冲突时采用海外一手版本，国内来源只补充 A 股/港股/国内政策视角。来源名仅用于核对，正文仍不得出现来源转述。
+12. **头号焦点优先级**：AI大模型发布/重大突破 > 芯片/半导体重大事件 > 科技巨头财报 > CEO重磅发言 > 宏观政策 > 地缘（仅战争升级/停火/制裁重大变化级别）。
+13. 字数（最重要）：渲染后正文目标 **{tmin}-{tmax} 字**，硬范围 {hmin}-{hmax}。不要靠增加碎段凑字。**focus 每段 280-360 字，ai_tech 每段 270-350 字，stock_rotation/iran/macro 每段 230-310 字，commodity 两段各 250-320 字**；这里指去掉 `[[c:]]`、`[[red:]]`、`[[green:]]` 和 `**` 后读者实际看到的字数。每段通常 3-5 句，内部顺序为“事实与数字→市场反应/交叉验证→传导逻辑→风险或验证条件”。alert 可见正文 180-240 字，logic_chain 合计 450-650 字，note 40-90 字。无 iran 时，把缺口集中补进 focus 与 ai_tech 的新增论证段。
+14. **编辑感铁律**：板块标题必须写出本节核心矛盾或结论，格式为“板块名 | 结论/反差”，不能只是罗列新闻名词；段落之间用事实推进。同一事实只在最相关板块完整展开，其他板块只写其新增含义，禁止重复背景、万能结论和“短线波动不改长期趋势”式套话。
 {thin_block}
 【日期与标识】（照抄以下值）
 - date_yyyymmdd = "{day}"
@@ -360,7 +388,7 @@ def build_prompt(snap: dict, pool: list[dict], day: str, date_cn: str, alert_tim
 【行情数据】
 {format_market(snap)}
 
-【新闻池】（共 {len(pool)} 条，均落在 {snap["news_window"]["start"]} 至 {snap["news_window"]["end"]} 窗口内）
+【新闻池】（共 {len(pool)} 条，均落在 {snap["news_window"]["start"]} 至 {snap["news_window"]["end"]} 窗口内；每行格式为「序号 发布时间 | 来源 | 标题。摘要」，按海外一手媒体→国内快讯→国内热榜排序）
 {news_block}
 {calendar_block}
 {views_block}

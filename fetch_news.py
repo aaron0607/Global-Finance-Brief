@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """财经简报本地新闻聚合脚本
 
-聚合 alphaear (NewsNow API)、Bloomberg/CNBC RSS、Futu 牛牛新闻搜索、金十数据（jin10 远程 MCP），
-输出统一 news_feed.json 供内容编辑使用。
+聚合 Bloomberg/CNBC RSS、Reuters 官方 news sitemap（失败时 Bing News 兜底）、
+Futu 牛牛新闻搜索、金十数据（jin10 远程 MCP）、华尔街见闻美股直播、alphaear (NewsNow API)，
+输出统一 news_feed.json 供内容编辑使用。入池优先级由 write_brief.build_news_pool 按来源分级决定。
 
 金十 token 从环境变量 JIN10_MCP_TOKEN 读取（未配置则跳过并告警）。
 
@@ -15,6 +16,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import html
 import json
 import os
 import re
@@ -37,8 +39,6 @@ ALPHAEAR_SOURCES = {
 }
 
 # ── RSS 源（Bloomberg / CNBC）────────────────────────────
-# Reuters 无公开 RSS（reutersagency.com/feed 全部 404、reuters.com 反爬 401），
-# 由调用方通过 WebSearch(domain:reuters.com) 获取，不在脚本内抓取。
 RSS_FEEDS = {
     "bloomberg": {
         "name": "Bloomberg Markets",
@@ -51,6 +51,26 @@ RSS_FEEDS = {
         "category": "finance",
     },
 }
+
+# ── Reuters ────────────────────────────────────────────
+# Reuters 无公开 RSS、文章页反爬，但官方 Google News sitemap 可直连：每页 50 条、按发布时间倒序，
+# 带精确 news:publication_date。按栏目白名单只保留英文财经/科技/国际新闻。
+# sitemap 不可达（如服务器网络限制）时退回 Bing News RSS（site:reuters.com），其 pubDate 精度较差，
+# 只保留 URL 日期与 pubDate 相差不超过 1 天的条目。
+REUTERS_SITEMAP_URL = "https://www.reuters.com/arc/outboundfeeds/news-sitemap/?outputType=xml&from={offset}"
+# 栏目白名单（URL 路径前缀）：财经/科技全收；国际新闻只收影响定价的美国、中国、中东（地缘/原油）。
+REUTERS_SECTIONS = (
+    "business/", "markets/", "technology/", "commentary/breakingviews/",
+    "world/us/", "world/china/", "world/middle-east/",
+)
+REUTERS_SECTIONS_EXCLUDE = ("business/environment/",)  # 多为天气/灾害，与定价弱相关
+REUTERS_LOOKBACK_HOURS = 26
+REUTERS_MAX_ITEMS = 40
+REUTERS_MAX_PAGES = 20
+REUTERS_TIME_BUDGET_S = 60
+BING_NEWS_URL = "https://www.bing.com/news/search"
+BING_REUTERS_QUERIES = ("markets", "stocks", "technology", "economy Fed", "oil gold")
+REUTERS_URL_DATE = re.compile(r"-(\d{4}-\d{2}-\d{2})/?$")
 
 # ── Futu 牛牛新闻搜索（公共 HTTP API，无需 OpenD/鉴权）────────
 # 供写稿阶段按关键词补强中文财经/个股新闻；keyword 可在调用时覆盖。
@@ -130,7 +150,7 @@ def _tag_text(block: str, tag: str) -> str:
 
 
 def _strip_html(raw: str) -> str:
-    return re.sub(r"<[^>]+>", " ", raw).replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", '"')
+    return html.unescape(re.sub(r"<[^>]+>", " ", raw))
 
 
 def _try_parse_rss_date(raw: str) -> Optional[str]:
@@ -200,6 +220,124 @@ def fetch_rss(feed_id: str) -> list[dict]:
         }
         for it in items[:20]
     ]
+
+
+def _reuters_section_ok(url: str) -> bool:
+    m = re.match(r"https://www\.reuters\.com/(.+)", url or "")
+    return bool(m) and m.group(1).startswith(REUTERS_SECTIONS) \
+        and not m.group(1).startswith(REUTERS_SECTIONS_EXCLUDE)
+
+
+def _reuters_item(title: str, url: str, published: dt.datetime, summary: str = "") -> dict:
+    return {
+        "source": "reuters",
+        "source_name": "Reuters",
+        "source_id": "reuters",
+        "title": title.strip(),
+        "url": url,
+        "summary": summary.strip()[:300],
+        "published_at": published.astimezone(BRIEF_TZ).isoformat(),
+    }
+
+
+def parse_reuters_sitemap(xml_text: str) -> list[tuple[dt.datetime, dict]]:
+    """解析一页 news sitemap → [(发布时间, item)]，含被栏目白名单过滤掉的条目时间（用于翻页判停）。"""
+    out = []
+    for block in re.findall(r"<url>(.*?)</url>", xml_text, re.DOTALL):
+        loc = _tag_text(block, "loc")
+        raw_date = _tag_text(block, "news:publication_date")
+        title = _clean_title(_tag_text(block, "news:title"))
+        try:
+            published = dt.datetime.fromisoformat(raw_date.replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        if published.tzinfo is None:
+            continue
+        item = _reuters_item(title, loc, published) if title and _reuters_section_ok(loc) else None
+        out.append((published, item))
+    return out
+
+
+def fetch_reuters_sitemap(now: Optional[dt.datetime] = None) -> list[dict]:
+    now = now or dt.datetime.now(dt.timezone.utc)
+    cutoff = now - dt.timedelta(hours=REUTERS_LOOKBACK_HOURS)
+    started = dt.datetime.now(dt.timezone.utc)
+    items, seen = [], set()
+    for page in range(REUTERS_MAX_PAGES):
+        if (dt.datetime.now(dt.timezone.utc) - started).total_seconds() > REUTERS_TIME_BUDGET_S:
+            print("[warn] reuters sitemap 翻页超时，已停止", file=sys.stderr)
+            break
+        resp = SESSION.get(REUTERS_SITEMAP_URL.format(offset=page * 50), timeout=15)
+        resp.raise_for_status()
+        rows = parse_reuters_sitemap(resp.text)
+        if not rows:
+            break
+        for published, item in rows:
+            if item and published >= cutoff and item["url"] not in seen:
+                seen.add(item["url"])
+                items.append(item)
+        if min(published for published, _ in rows) < cutoff:
+            break
+    items.sort(key=lambda it: it["published_at"], reverse=True)
+    return items[:REUTERS_MAX_ITEMS]
+
+
+def parse_bing_reuters(xml_text: str) -> list[dict]:
+    """Bing News RSS → Reuters 条目。只收 News:Source=Reuters、真实 reuters.com 文章 URL，
+    且 URL 日期与 pubDate 相差不超过 1 天（Bing 的 pubDate 常有数小时偏差）。"""
+    from urllib.parse import parse_qs, urlparse
+
+    items = []
+    for block in re.findall(r"<item>(.*?)</item>", xml_text, re.DOTALL):
+        if _tag_text(block, "News:Source").strip() != "Reuters":
+            continue
+        link = _tag_text(block, "link").replace("&amp;", "&")
+        url = (parse_qs(urlparse(link).query).get("url") or [link])[0]
+        if not _reuters_section_ok(url):
+            continue
+        slug = REUTERS_URL_DATE.search(url)
+        try:
+            published = dt.datetime.strptime(_tag_text(block, "pubDate"), "%a, %d %b %Y %H:%M:%S %Z").replace(tzinfo=dt.timezone.utc)
+            slug_date = dt.date.fromisoformat(slug.group(1)) if slug else None
+        except ValueError:
+            continue
+        if not slug_date or abs((published.date() - slug_date).days) > 1:
+            continue
+        items.append(_reuters_item(_clean_title(_tag_text(block, "title")), url, published,
+                                   _strip_html(_tag_text(block, "description"))))
+    return items
+
+
+def fetch_reuters_bing() -> list[dict]:
+    items, seen = [], set()
+    for query in BING_REUTERS_QUERIES:
+        try:
+            resp = SESSION.get(BING_NEWS_URL, params={
+                "q": "site:reuters.com " + query, "format": "rss", "cc": "us",
+                "qft": 'sortbydate="1"',
+            }, timeout=15)
+            resp.raise_for_status()
+        except Exception as exc:  # noqa: BLE001 - 单查询失败不阻断
+            print(f"[warn] reuters-bing/{query}: {exc}", file=sys.stderr)
+            continue
+        for item in parse_bing_reuters(resp.text):
+            if item["url"] not in seen:
+                seen.add(item["url"])
+                items.append(item)
+    items.sort(key=lambda it: it["published_at"], reverse=True)
+    return items[:REUTERS_MAX_ITEMS]
+
+
+def fetch_reuters() -> list[dict]:
+    """Reuters：官方 news sitemap 优先，失败或 0 条时退回 Bing News。"""
+    try:
+        items = fetch_reuters_sitemap()
+        if items:
+            return items
+        print("[warn] reuters sitemap 0 条，改用 Bing News 兜底", file=sys.stderr)
+    except Exception as exc:  # noqa: BLE001
+        print(f"[warn] reuters sitemap 失败（{exc}），改用 Bing News 兜底", file=sys.stderr)
+    return fetch_reuters_bing()
 
 
 def _format_epoch(value) -> Optional[str]:
@@ -369,21 +507,18 @@ def fetch_wscn_live(limit: int = 20) -> list[dict]:
 def fetch_all() -> list[dict]:
     """聚合全部财经新闻来源。
 
-    Reuters 因无公开 RSS/反爬，由调用方用 WebSearch(domain:reuters.com) 补充。
+    顺序仅为可读性（海外 → 国内快讯 → 国内热榜），入池优先级由 write_brief 按来源分级决定。
     """
     all_items = []
 
-    # alphaear 财经源
-    for src_id in ALPHAEAR_SOURCES:
-        items = fetch_alphaear(src_id)
-        all_items.extend(items)
-        print(f"  alphaear/{src_id}: {len(items)} 条")
-
-    # RSS 财经源
+    # 海外一手媒体：RSS（Bloomberg / CNBC）+ Reuters
     for feed_id in RSS_FEEDS:
         items = fetch_rss(feed_id)
         all_items.extend(items)
         print(f"  rss/{feed_id}: {len(items)} 条")
+    reuters_items = fetch_reuters()
+    all_items.extend(reuters_items)
+    print(f"  reuters: {len(reuters_items)} 条")
 
     # Futu 牛牛新闻搜索
     futu_items = list(fetch_futu())
@@ -400,11 +535,17 @@ def fetch_all() -> list[dict]:
     all_items.extend(wscn_items)
     print(f"  wscn-live: {len(wscn_items)} 条")
 
+    # alphaear 国内热榜
+    for src_id in ALPHAEAR_SOURCES:
+        items = fetch_alphaear(src_id)
+        all_items.extend(items)
+        print(f"  alphaear/{src_id}: {len(items)} 条")
+
     return all_items
 
 
 def main():
-    print("→ 聚合新闻来源 (alphaear + Bloomberg/CNBC RSS + Futu) ...", file=sys.stderr)
+    print("→ 聚合新闻来源 (Bloomberg/CNBC RSS + Reuters + Futu + 金十 + 华尔街见闻 + alphaear) ...", file=sys.stderr)
     items = fetch_all()
     out_path = BASE_DIR / "news_feed.json"
     payload = {

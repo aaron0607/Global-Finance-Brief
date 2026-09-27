@@ -1,5 +1,15 @@
 # 变更记录
 
+## 2026-09-27 · 新闻池改为海外一手媒体优先，接入 Reuters
+
+- **原因**：`fetch_news.py` 按固定顺序拼接（alphaear 热榜 → Bloomberg/CNBC → 富途 → 金十 → 华尔街见闻直播），`write_brief.build_news_pool()` 过滤 24h 窗口后直接截取前 100 条，入池优先级实际由拼接顺序决定，国内热榜排在海外媒体之前、富途/华尔街见闻直播常被截掉。Reuters 此前只在人工流程里用 WebSearch 补充，服务器 DeepSeek 自动稿完全没有 Reuters。
+- **Reuters 接入**：实测 `reuters.com/arc/outboundfeeds/news-sitemap/?outputType=xml&from=N` 可直连（HTTP 200，每页 50 条、按时间倒序、带精确 `news:publication_date`，约 18 页覆盖 48h）。新增 `fetch_reuters()`：翻页至 26h 截止点（上限 20 页/60 秒），按 URL 前缀白名单保留 `business/ markets/ technology/ commentary/breakingviews/ world/us/ world/china/ world/middle-east/`，排除体育、多语种版和 `business/environment/`（天气灾害），最多 40 条。sitemap 失败或 0 条时退回 Bing News RSS（`site:reuters.com` 多组关键词、按时间排序），只收 `News:Source=Reuters` 的真实文章 URL，且 URL 日期与 pubDate 相差不超过 1 天（Bing pubDate 实测有数小时偏差，只作兜底）。两者都失败时 Reuters 为 0 条，不阻断任务。Google News RSS 可用但国内服务器大概率不可达，未采用。
+- **分级入池**：`write_brief.SOURCE_TIERS` 定义一级海外一手（bloomberg/reuters/cnbc）、二级国内实时快讯（富途/金十/华尔街见闻直播）、三级国内热榜（财联社/华尔街见闻/雪球，未登记来源同级）。池内按（级别, 发布时间倒序）排序、按标题去重（同题保留高等级来源）；一级最多 `OVERSEAS_CAP`=60 席，给 A 股/国内视角保留至少 40 席，二三级不足时再由剩余海外条目补满 100 条。
+- **写稿提示词**：新闻池每行增加来源名；新增第 11 条"海外一手媒体优先"——英文原文准确译成中文，同一事件以海外一手媒体的事实、数字、时间为准，国内来源只补充 A 股/港股/国内政策视角；"正文不得出现来源转述"红线不变。原第 11-13 条顺延为 12-14。
+- **顺带修复**：RSS 解析 `_strip_html` 只解码 4 种实体，CNBC 标题残留 `&apos;`；改用 `html.unescape`。
+- **影响**：本机实测 `fetch_news.py` 8 秒完成，Reuters 36 条；新闻池 100 条中海外 60 条（Reuters 26 / Bloomberg 17 / CNBC 17）、国内 40 条。周日窗口内国内二级来源已占满 40 席，三级热榜（含财联社 A 股快讯）可能不入池——如 A 股覆盖不足，可调低 `OVERSEAS_CAP` 或把财联社调到二级。**生产服务器（国内 IP）能否直连 reuters.com / bloomberg.com 未验证**，同步后需看日志 `reuters:` 与 `rss/bloomberg:` 条数。
+- **回归**：新增 `test_news_sources.py` 10 项（sitemap 解析/栏目过滤/时区、翻页判停、sitemap 失败退 Bing、Bing 来源与日期一致性过滤、HTML 实体解码、海外优先排序、海外上限、海外补位、窗口外与重复剔除、未知来源分级）；`test_write_brief.py` 52 项、`test_market_alignment.py` 27 项、`test_calendar.py` 22 项均通过。
+
 ## 2026-09-24 · VIX 改为 Yahoo 优先、CBOE 两级兜底
 
 - **现象**：北京时间 09-24 22:54 采集时，CBOE 实时延时报价 JSON（`_VIX.json`）的 `last_trade_time` 仍停在 `2026-09-22T16:15:01`，快照 VIX=14.21 落后价格指数两个交易日（age 2559 分钟）；因在 ≤3 自然日滞后容忍内，快照仍判 valid，读者看到的是旧值。同时 Yahoo `^VIX` 连续 5 次 HTTP 200，盘中值 15.68、前收 15.18。

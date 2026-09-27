@@ -24,7 +24,7 @@ python3 -m venv .venv
 .venv/bin/python build_brief.py content_YYYYMMDD.json
 ```
 
-`fetch_market.py` 是行情数据的唯一写入入口；`fetch_views.py` 用于读取最新投资观点，事件本身仍按媒体原意客观呈现。`fetch_news.py` 聚合 alphaear（财联社/华尔街见闻/雪球热榜）、Bloomberg/CNBC RSS、富途牛牛新闻搜索（futu-news-search）与华尔街见闻美股直播，并在配置 `JIN10_MCP_TOKEN` 时并入金十数据快讯，输出 `news_feed.json`。人工研究流程可用 `WebSearch(domain:reuters.com)` 补充 Reuters；服务器 cron 无实时 WebSearch，不含该补充链路。
+`fetch_market.py` 是行情数据的唯一写入入口；`fetch_views.py` 用于读取最新投资观点，事件本身仍按媒体原意客观呈现。`fetch_news.py` 聚合 Bloomberg/CNBC RSS、Reuters（官方 news sitemap `reuters.com/arc/outboundfeeds/news-sitemap/`，按栏目白名单保留财经/科技/美中中东国际新闻、近 26 小时、最多 40 条；sitemap 不可达时退回 Bing News RSS `site:reuters.com`，并要求 URL 日期与 pubDate 相差不超过 1 天）、富途牛牛新闻搜索（futu-news-search）、华尔街见闻美股直播与 alphaear（财联社/华尔街见闻/雪球热榜），并在配置 `JIN10_MCP_TOKEN` 时并入金十数据快讯，输出 `news_feed.json`。新闻池按来源分级入池（`write_brief.build_news_pool`）：一级海外一手媒体 Bloomberg/Reuters/CNBC 优先、最多 60 席；二级国内实时快讯（富途、金十、华尔街见闻美股直播）；三级国内聚合热榜（财联社/华尔街见闻/雪球）；二三级不足时由剩余海外条目补满 100 条。同一事件多源时，事实、数字、时间以海外一手媒体为准。人工研究流程仍可用 `WebSearch(domain:reuters.com)` 补充核验。
 
 `fetch_calendar.py` 是「本周财经日历」的唯一写入入口，输出 `calendar_feed.json`：主源为金十数据日历（jin10 MCP `list_calendar`，本自然周经济数据带 1-5 星重要性，需 `JIN10_MCP_TOKEN`），兜底与跨周补充为东方财富财经日历（`RPT_CPH_FECALENDAR`，免鉴权，含会议/发布会等事件）。脚本剔除国债竞拍、周度库存分项与 ISM 分项等噪音，按重要性、地区权重和关键指标打分，合并同一时刻同地区的数据行，默认给出未来 7 天内最多 5 条。`write_brief.py` 用它确定性回填 `calendar`，模型不再决定日期；日历源不可用时写稿直接终止。
 
@@ -81,7 +81,7 @@ python3 -m venv .venv
 ]
 ```
 
-`published_at` 必须是带时区的 ISO 8601 时间。每个正文板块都要有来源映射；来源早于 `as_of-24小时`、晚于 `as_of`，或无法确认具体发布时间时，生成器会停止构建。新闻来源：金十数据（jin10，配置 `JIN10_MCP_TOKEN` 时）、alphaear 聚合（财联社/华尔街见闻/雪球热榜）、Bloomberg/CNBC RSS、富途牛牛新闻搜索与华尔街见闻美股直播。人工研究流程可通过 `WebSearch(domain:reuters.com)` 补充 Reuters；任务不得连接、搜索或读取 Gmail 及任何邮件来源。
+`published_at` 必须是带时区的 ISO 8601 时间。每个正文板块都要有来源映射；来源早于 `as_of-24小时`、晚于 `as_of`，或无法确认具体发布时间时，生成器会停止构建。新闻来源：Bloomberg/CNBC RSS、Reuters（官方 news sitemap，Bing News 兜底）、富途牛牛新闻搜索、金十数据（jin10，配置 `JIN10_MCP_TOKEN` 时）、华尔街见闻美股直播与 alphaear 聚合（财联社/华尔街见闻/雪球热榜），海外一手媒体优先入池。人工研究流程可通过 `WebSearch(domain:reuters.com)` 补充核验 Reuters；任务不得连接、搜索或读取 Gmail 及任何邮件来源。
 
 ## 行情口径
 
