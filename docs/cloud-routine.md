@@ -8,7 +8,7 @@
 | 交接 | GitHub `aaron0607/Global-Finance-Brief` 的 `briefs` 分支 | 云端写完即推送 | `briefs/YYYYMMDD/{content_*.json, wechat_article_*.html, READY.json}`；失败时 `FAILED.txt` |
 | 发布公众号草稿 + 飞书通知 | 腾讯云服务器 `115.159.56.153`（微信 API IP 白名单在这台） | cron 北京时间 08:00–09:00 每 5 分钟；当天草稿建好后后续轮次直接退出 | `server_publish.sh` → `publish_wechat.py` |
 
-为什么经 GitHub 交接：云端容器出站只有 HTTPS 代理，实测连不上服务器 SSH 22 端口；服务器只需要能 `git fetch` GitHub。
+为什么经 GitHub 交接：云端容器出站只有 HTTPS 代理，实测连不上服务器 SSH 22 端口。服务器（腾讯云国内）实测连 `github.com:443` 超时、`git clone` 不可用，但 `api.github.com` 可达，所以服务器侧一律走 GitHub REST API：`server_publish.sh` 读 `briefs` 分支成稿，`server_sync.py` 同步 `main` 代码，两者都用 `.secrets.env` 里的只读令牌 `BRIEF_GITHUB_TOKEN`（fine-grained，仅本仓库 Contents: Read-only）。
 
 ## 安全边界
 
@@ -26,12 +26,14 @@
    - 云端写稿不需要 `DEEPSEEK_API_KEY`。
 3. **服务器**：
    ```bash
-   git clone https://github.com/aaron0607/Global-Finance-Brief /home/ubuntu/brief-inbox   # 私有仓库改用只读 deploy key + SSH 地址
-   cd /home/ubuntu/finance-brief && git pull   # 或本机 git push production main，拿到 server_publish.sh
-   crontab -e
-   #   删除原来的：20 8 * * * ... run_brief.sh ...
-   #   新增：
-   #   TZ=Asia/Shanghai
+   # 1) GitHub 网页创建 fine-grained token：只选本仓库，Repository permissions → Contents: Read-only
+   # 2) 写入令牌（输入时不回显，不要贴到任何对话里）
+   cd /home/ubuntu/finance-brief && read -rsp "粘贴令牌后回车: " T && echo && echo "BRIEF_GITHUB_TOKEN=$T" >> .secrets.env && chmod 600 .secrets.env && unset T
+   # 3) 首次同步代码（先下载同步脚本本身，再用它同步 main 的全部代码；被覆盖的旧文件备份到 backups/sync_*/）
+   . ./.secrets.env && curl -sf -H "Authorization: Bearer $BRIEF_GITHUB_TOKEN" -H "Accept: application/vnd.github.raw+json" \
+     https://api.github.com/repos/aaron0607/Global-Finance-Brief/contents/server_sync.py?ref=main -o server_sync.py && python3 server_sync.py
+   # 以后代码有更新：python3 server_sync.py
+   # 4) crontab：注释掉原 run_brief.sh 那一行，新增两行（沿用 crontab 里已有的 CRON_TZ=Asia/Shanghai）：
    #   */5 8 * * * mkdir -p /home/ubuntu/finance-brief/logs && /home/ubuntu/finance-brief/server_publish.sh >> /home/ubuntu/finance-brief/logs/publish_cron.log 2>&1
    #   0 9 * * *   mkdir -p /home/ubuntu/finance-brief/logs && /home/ubuntu/finance-brief/server_publish.sh >> /home/ubuntu/finance-brief/logs/publish_cron.log 2>&1
    ```

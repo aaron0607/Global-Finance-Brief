@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 腾讯云服务器「只发布」脚本：轮询 GitHub briefs 分支，拿到云端当日成稿后建公众号草稿（每天只建一次）。
+# 腾讯云服务器「只发布」脚本：经 GitHub REST API 轮询 briefs 分支，拿到云端当日成稿后建公众号草稿（每天只建一次）。
 #
 # 分工：Claude Code cloud 定时会话（北京时间 08:20）采集 + 写稿 + 构建，经 cloud_handoff.py 推到
 #       GitHub 的 briefs 分支；本脚本只负责拉取、发布前终检（publish_wechat.py 内置）、建草稿、飞书通知。
@@ -10,16 +10,24 @@
 #   0 9 * * *   mkdir -p /home/ubuntu/finance-brief/logs && /home/ubuntu/finance-brief/server_publish.sh >> /home/ubuntu/finance-brief/logs/publish_cron.log 2>&1
 #   （只在北京时间 08:00–09:00 每 5 分钟拉取；当天草稿建好后其余轮次在拉取前直接退出）
 #
-# 一次性准备：
-#   git clone https://github.com/aaron0607/Global-Finance-Brief /home/ubuntu/brief-inbox
-#   （私有仓库需给服务器配只读 deploy key 并用 SSH 地址克隆；本脚本只对该目录做 fetch，不改工作区）
+# 为什么走 API：服务器（腾讯云国内）连 github.com:443 超时，git clone/fetch 不可用；api.github.com 可达。
+# 一次性准备：在 .secrets.env（chmod 600）写入 BRIEF_GITHUB_TOKEN=<只读 fine-grained token>，
+#   权限只给本仓库 Contents: Read-only。代码同步见 server_sync.py。
 #
 # 状态文件（logs/publish_state/）：DAY.published / DAY.publish_failed / DAY.alerted，保证幂等与只告警一次。
 set -u
 PROJ_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$PROJ_DIR"
 VENV_PY="$PROJ_DIR/.venv/bin/python"
-INBOX="${BRIEF_INBOX:-/home/ubuntu/brief-inbox}"
+REPO="${BRIEF_REPO:-aaron0607/Global-Finance-Brief}"
+API="${BRIEF_GITHUB_API:-https://api.github.com}"
+if [ -f "$PROJ_DIR/.secrets.env" ]; then
+  set -a
+  # shellcheck disable=SC1091
+  . "$PROJ_DIR/.secrets.env"
+  set +a
+fi
+TOKEN="${BRIEF_GITHUB_TOKEN:-}"
 DEADLINE="${BRIEF_DEADLINE:-0850}"   # 北京时间 HHMM，过点仍无成稿即飞书告警
 WINDOW_START="${BRIEF_WINDOW_START:-0800}"  # 轮询窗口（北京时间 HHMM），窗口外直接退出；
 WINDOW_END="${BRIEF_WINDOW_END:-0900}"      # 手动补发时设 BRIEF_FORCE=1 跳过窗口限制
@@ -54,34 +62,48 @@ exec 9>"$STATE/.lock"
 flock -n 9 || exit 0   # 上一轮还在跑（如正在建草稿）则跳过
 [ -e "$STATE/$DAY.published" ] || [ -e "$STATE/$DAY.publish_failed" ] && exit 0
 
-if ! timeout 90 git -C "$INBOX" fetch -q origin briefs >>"$LOG" 2>&1; then
-  log "⚠️ 拉取 GitHub briefs 分支失败"
-  [ "$NOW_HM" -ge "$DEADLINE" ] && alert_once alerted "⚠️ 财经简报 ${DAY} 失败：服务器拉取 GitHub briefs 分支持续失败，未发布"
+if [ -z "$TOKEN" ]; then
+  alert_once alerted "⚠️ 财经简报 ${DAY} 失败：服务器 .secrets.env 未配置 BRIEF_GITHUB_TOKEN，无法读取云端成稿"
+  exit 1
+fi
+
+gh_get() { # gh_get <仓库内路径> <输出文件>：打印 HTTP 状态码（200=取到，404=尚无，其它=网络/鉴权问题）
+  curl -s -m 30 -o "$2" -w '%{http_code}' \
+    -H "Authorization: Bearer $TOKEN" -H "Accept: application/vnd.github.raw+json" \
+    -H "X-GitHub-Api-Version: 2022-11-28" \
+    "$API/repos/$REPO/contents/$1?ref=briefs"
+}
+
+TMP="$(mktemp -d)"
+trap 'rm -rf "$TMP"' EXIT
+READY_CODE="$(gh_get "briefs/$DAY/READY.json" "$TMP/READY.json")"
+if [ "$READY_CODE" != "200" ] && [ "$READY_CODE" != "404" ]; then
+  log "⚠️ 读取 GitHub briefs 失败(HTTP $READY_CODE)"
+  [ "$NOW_HM" -ge "$DEADLINE" ] && alert_once alerted "⚠️ 财经简报 ${DAY} 失败：服务器读取 GitHub 成稿持续失败(HTTP $READY_CODE)，未发布"
   exit 0
 fi
 
-REF="origin/briefs:briefs/$DAY"
-if git -C "$INBOX" cat-file -e "$REF/FAILED.txt" 2>/dev/null \
-    && ! git -C "$INBOX" cat-file -e "$REF/READY.json" 2>/dev/null; then
-  REASON="$(git -C "$INBOX" show "$REF/FAILED.txt" | tail -n +2 | head -c 300)"
-  alert_once alerted "⚠️ 财经简报 ${DAY} 失败（云端）：${REASON}"
-  exit 0
-fi
-
-if ! git -C "$INBOX" cat-file -e "$REF/READY.json" 2>/dev/null; then
+if [ "$READY_CODE" = "404" ]; then
+  if [ "$(gh_get "briefs/$DAY/FAILED.txt" "$TMP/FAILED.txt")" = "200" ]; then
+    REASON="$(tail -n +2 "$TMP/FAILED.txt" | head -c 300)"
+    alert_once alerted "⚠️ 财经简报 ${DAY} 失败（云端）：${REASON}"
+    exit 0
+  fi
   [ "$NOW_HM" -ge "$DEADLINE" ] && alert_once alerted "⚠️ 财经简报 ${DAY} 失败：截至 ${DEADLINE:0:2}:${DEADLINE:2} 未收到云端成稿"
   exit 0
 fi
 
-log "收到云端成稿：$(git -C "$INBOX" show "$REF/READY.json" | tr -d '\n' | head -c 300)"
+log "收到云端成稿：$(tr -d '\n' <"$TMP/READY.json" | head -c 300)"
 for f in "content_${DAY}.json" "wechat_article_${DAY}.html"; do
-  if ! git -C "$INBOX" show "$REF/$f" >"$PROJ_DIR/$f.tmp" 2>>"$LOG" || [ ! -s "$PROJ_DIR/$f.tmp" ]; then
-    rm -f "$PROJ_DIR/$f.tmp"
-    alert_once alerted "⚠️ 财经简报 ${DAY} 失败：云端交接缺少 $f"
+  CODE="$(gh_get "briefs/$DAY/$f" "$TMP/$f")"
+  if [ "$CODE" != "200" ] || [ ! -s "$TMP/$f" ]; then
+    log "⚠️ 下载 $f 失败(HTTP $CODE)，下一轮重试"
+    [ "$NOW_HM" -ge "$DEADLINE" ] && alert_once alerted "⚠️ 财经简报 ${DAY} 失败：云端成稿 $f 下载失败(HTTP $CODE)"
     exit 0
   fi
-  mv "$PROJ_DIR/$f.tmp" "$PROJ_DIR/$f"
 done
+mv "$TMP/content_${DAY}.json" "$PROJ_DIR/content_${DAY}.json"
+mv "$TMP/wechat_article_${DAY}.html" "$PROJ_DIR/wechat_article_${DAY}.html"
 
 # 发布只尝试一次：失败不得重复建稿（AGENTS.md），由人工排查后手动补发或 --update。
 log "发布公众号草稿"
