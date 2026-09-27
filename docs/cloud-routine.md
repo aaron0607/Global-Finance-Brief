@@ -6,7 +6,7 @@
 |---|---|---|---|
 | 采集 + 写稿 + 构建 + 终检 | Claude Code cloud 定时会话（Routine） | 北京时间每日 08:20（cron `20 0 * * *` UTC） | `cloud_collect.sh` → Claude 按 AGENTS.md 写 `content_YYYYMMDD.json` → `build_brief.py` → `cloud_handoff.py` |
 | 交接 | GitHub `aaron0607/Global-Finance-Brief` 的 `briefs` 分支 | 云端写完即推送 | `briefs/YYYYMMDD/{content_*.json, wechat_article_*.html, READY.json}`；失败时 `FAILED.txt` |
-| 发布公众号草稿 + 飞书通知 | 腾讯云服务器 `115.159.56.153`（微信 API IP 白名单在这台） | cron 每 5 分钟（08:00–10:55） | `server_publish.sh` → `publish_wechat.py` |
+| 发布公众号草稿 + 飞书通知 | 腾讯云服务器 `115.159.56.153`（微信 API IP 白名单在这台） | cron 北京时间 08:00–09:00 每 5 分钟；当天草稿建好后后续轮次直接退出 | `server_publish.sh` → `publish_wechat.py` |
 
 为什么经 GitHub 交接：云端容器出站只有 HTTPS 代理，实测连不上服务器 SSH 22 端口；服务器只需要能 `git fetch` GitHub。
 
@@ -15,7 +15,7 @@
 - 云端**绝不**运行 `publish_wechat.py`，也不接触微信 AppSecret；草稿只在服务器创建。
 - 服务器每天只建一次草稿：`logs/publish_state/DAY.published` / `DAY.publish_failed` 存在即不再发布；发布失败不重试（AGENTS.md：失败时不得重复创建）。
 - `cloud_handoff.py` 拒绝覆盖同日已有的不同 `READY.json`；修订已发布草稿仍走 `publish_wechat.py --update`。
-- 服务器侧告警（飞书，每天同类只发一次）：云端推送 `FAILED.txt`、截至 10:30 未收到成稿、拉取 GitHub 失败、发布失败。
+- 服务器侧告警（飞书，每天同类只发一次）：云端推送 `FAILED.txt`、截至 08:50 未收到成稿、拉取 GitHub 失败、发布失败。
 
 ## 上线步骤（顺序不能乱，避免两个发布者或空跑）
 
@@ -32,8 +32,10 @@
    #   删除原来的：20 8 * * * ... run_brief.sh ...
    #   新增：
    #   TZ=Asia/Shanghai
-   #   */5 8-10 * * * mkdir -p /home/ubuntu/finance-brief/logs && /home/ubuntu/finance-brief/server_publish.sh >> /home/ubuntu/finance-brief/logs/publish_cron.log 2>&1
+   #   */5 8 * * * mkdir -p /home/ubuntu/finance-brief/logs && /home/ubuntu/finance-brief/server_publish.sh >> /home/ubuntu/finance-brief/logs/publish_cron.log 2>&1
+   #   0 9 * * *   mkdir -p /home/ubuntu/finance-brief/logs && /home/ubuntu/finance-brief/server_publish.sh >> /home/ubuntu/finance-brief/logs/publish_cron.log 2>&1
    ```
+   09:00 之后脚本不再轮询：云端晚到的成稿需人工在服务器执行 `BRIEF_FORCE=1 ./server_publish.sh` 补发（仍只建一次草稿）。
    `run_brief.sh` 保留为应急手动通道（云端整天不可用时在服务器手动跑，DeepSeek 写稿），不再挂 cron。
 4. **启用 Routine**（名称「财经简报每日写稿」），首日观察：云端会话日志、`briefs` 分支、服务器 `logs/publish_YYYYMMDD.log`、飞书通知。
 

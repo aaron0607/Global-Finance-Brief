@@ -117,7 +117,7 @@
 ## 生产调度（云端写稿 + 服务器发布）
 
 - **写稿在 Claude Code cloud**：定时 Routine 于北京时间每日 08:20 新开会话，运行 `origin/main` 最新代码：`cloud_collect.sh` 采集 → Claude 按本文件写 `content_YYYYMMDD.json` → `build_brief.py` 构建与终检 → `cloud_handoff.py YYYYMMDD` 把成稿推到 GitHub `briefs` 分支；任何关键环节失败用 `cloud_handoff.py YYYYMMDD --failed "原因"` 交接失败标记。云端**绝不**运行 `publish_wechat.py`。Routine 提示词、上线步骤与安全边界见 [`docs/cloud-routine.md`](docs/cloud-routine.md)。
-- **发布在腾讯云服务器 `115.159.56.153`**（微信 API IP 白名单所在）：cron 每 5 分钟运行 `server_publish.sh`，从 `/home/ubuntu/brief-inbox`（GitHub 克隆）拉 `briefs` 分支，拿到当日 `READY.json` 后执行 `publish_wechat.py`（发布前终检照旧），每天只建一次草稿；收到 `FAILED.txt`、10:30 仍无成稿、拉取失败或发布失败时飞书告警。
+- **发布在腾讯云服务器 `115.159.56.153`**（微信 API IP 白名单所在）：cron 在北京时间 08:00–09:00 每 5 分钟运行 `server_publish.sh`（窗口外脚本直接退出，当天草稿建好后后续轮次在拉取前退出），从 `/home/ubuntu/brief-inbox`（GitHub 克隆）拉 `briefs` 分支，拿到当日 `READY.json` 后执行 `publish_wechat.py`（发布前终检照旧），每天只建一次草稿；收到 `FAILED.txt`、08:50 仍无成稿、拉取失败或发布失败时飞书告警。
 - 服务器不再挂 `run_brief.sh` 的 cron；它保留为云端整天不可用时的**手动应急通道**（DeepSeek 写稿），与 Routine 同一天只能二选一，禁止形成两个发布者。本机调度保持停用。
 - 云端环境变量：`JIN10_MCP_TOKEN`、`LARK_APP_ID`、`LARK_APP_SECRET` 按数据源需要配置（在环境设置里添加，不写入仓库）；云端写稿不需要 `DEEPSEEK_API_KEY`。服务器 `.secrets.env`（chmod 600）只在走应急通道时需要 `DEEPSEEK_API_KEY`。cron 重定向前必须先创建 `logs/`。
 - `fetch_views.py` 失败属于非致命告警；行情、新闻或财经日历失败（`fetch_calendar.py` 重试一次仍失败）、结构/字数校验失败、构建失败均必须终止并交接 FAILED。DeepSeek 应急稿没有实时 WebSearch，发布前建议复核关键数字。

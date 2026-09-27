@@ -6,7 +6,9 @@
 #
 # 服务器 crontab（替换原 run_brief.sh 那一行，禁止两个发布者并存）：
 #   TZ=Asia/Shanghai
-#   */5 8-10 * * * mkdir -p /home/ubuntu/finance-brief/logs && /home/ubuntu/finance-brief/server_publish.sh >> /home/ubuntu/finance-brief/logs/publish_cron.log 2>&1
+#   */5 8 * * * mkdir -p /home/ubuntu/finance-brief/logs && /home/ubuntu/finance-brief/server_publish.sh >> /home/ubuntu/finance-brief/logs/publish_cron.log 2>&1
+#   0 9 * * *   mkdir -p /home/ubuntu/finance-brief/logs && /home/ubuntu/finance-brief/server_publish.sh >> /home/ubuntu/finance-brief/logs/publish_cron.log 2>&1
+#   （只在北京时间 08:00–09:00 每 5 分钟拉取；当天草稿建好后其余轮次在拉取前直接退出）
 #
 # 一次性准备：
 #   git clone https://github.com/aaron0607/Global-Finance-Brief /home/ubuntu/brief-inbox
@@ -18,12 +20,18 @@ PROJ_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$PROJ_DIR"
 VENV_PY="$PROJ_DIR/.venv/bin/python"
 INBOX="${BRIEF_INBOX:-/home/ubuntu/brief-inbox}"
-DEADLINE="${BRIEF_DEADLINE:-1030}"   # 北京时间 HHMM，过点仍无成稿即告警
+DEADLINE="${BRIEF_DEADLINE:-0850}"   # 北京时间 HHMM，过点仍无成稿即飞书告警
+WINDOW_START="${BRIEF_WINDOW_START:-0800}"  # 轮询窗口（北京时间 HHMM），窗口外直接退出；
+WINDOW_END="${BRIEF_WINDOW_END:-0900}"      # 手动补发时设 BRIEF_FORCE=1 跳过窗口限制
 DAY="$(TZ=Asia/Shanghai date +%Y%m%d)"
 NOW_HM="$(TZ=Asia/Shanghai date +%H%M)"
 STATE="$PROJ_DIR/logs/publish_state"
 LOG="$PROJ_DIR/logs/publish_$DAY.log"
 mkdir -p "$STATE"
+
+if [ "${BRIEF_FORCE:-0}" != "1" ] && { [ "$NOW_HM" -lt "$WINDOW_START" ] || [ "$NOW_HM" -gt "$WINDOW_END" ]; }; then
+  exit 0
+fi
 
 log() { echo "[$(TZ=Asia/Shanghai date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG"; }
 
