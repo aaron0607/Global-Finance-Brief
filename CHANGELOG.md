@@ -1,5 +1,18 @@
 # 变更记录
 
+## 2026-09-27 · 生产调度迁移：Claude Code cloud 写稿，腾讯云服务器只发布
+
+- **原因**：用户决定把写稿迁到 Claude Code cloud，每天北京时间 08:20 自动执行，由 Claude 按 AGENTS.md 人工流程写稿（可用 WebSearch 核验、读 Reuters 原文，质量高于 DeepSeek 自动稿）；腾讯云服务器因微信 API IP 白名单只负责发布公众号草稿。
+- **交接方式裁决**：云端容器出站只有 HTTPS 代理，实测到服务器 `115.159.56.153:22` 不通，无法沿用 `publish_wechat.py` 的 scp/ssh 路径；改经 GitHub 交接：云端推送孤儿分支 `briefs`（只放 `briefs/YYYYMMDD/` 运行产物），服务器定时 `git fetch` 拉取。云端实测可推送 `briefs` 分支；行情、新闻、日历、QDII（fundgz）、飞书、金十接口在云端均可达。
+- **新增**：
+  - `cloud_collect.sh`：云端 Phase 1，建 venv、并行采集、行情/日历重试一次，关键采集失败 rc=1（口径同 `run_brief.sh`）。
+  - `cloud_handoff.py`：交接前做与 `publish_wechat.py` 相同的终检（结构残留、强调色、日历、成稿终检），在临时 worktree 基于最新 `origin/briefs` 提交 `content`、`html`、`READY.json`（as_of、标题、代码版本、交接时间）并推送，非快进重试 4 次；`--failed` 交接失败原因；同日已有不同 READY 时拒绝覆盖；推送返回失败但实际已落地时，重试识别为同一内容视为成功。
+  - `server_publish.sh`：服务器 cron 每 5 分钟，flock 防并发；拿到当日 READY 后取出文件执行 `publish_wechat.py`，成功/失败都写状态文件、每天只建一次草稿、发布失败不重试；`FAILED.txt`、10:30（`BRIEF_DEADLINE`）无成稿、拉取失败、发布失败均飞书告警且同类只发一次；FAILED 之后云端补推 READY 仍会正常发布。
+  - `docs/cloud-routine.md`：分工表、安全边界、上线顺序与 Routine 提示词原文。
+- **规则**：AGENTS.md「服务器定时运行」改为「生产调度」；服务器不再挂 `run_brief.sh` cron（保留为手动应急通道，与 Routine 同日二选一）；代码以 GitHub main 为准；第 5 步注明发布只在服务器进行。
+- **事故与修复（开发期间）**：`test_cloud_handoff.py` 初版因 `git()` 默认参数 `cwd=BASE` 在定义时绑定，mock BASE 无效，测试把假数据推到了真实 `briefs` 分支（`briefs/20260928` READY、`20260929` FAILED）。服务器轮询尚未部署，未造成发布；已用普通提交删除这些文件（force push 被拒，历史保留），并把 `cwd` 改为调用时解析，测试确认不再触碰真实远端。
+- **验证**：本地裸仓库模拟 GitHub 做端到端演练：交接 READY → 服务器两轮轮询只调用一次发布；FAILED → 只告警一次且不发布；截止时间无成稿 → 只告警一次。`test_cloud_handoff.py` 3 项、`test_news_sources.py` 10 项、`test_write_brief.py` 52 项、`test_market_alignment.py` 27 项、`test_calendar.py` 22 项通过。
+
 ## 2026-09-27 · 新闻池改为海外一手媒体优先，接入 Reuters
 
 - **原因**：`fetch_news.py` 按固定顺序拼接（alphaear 热榜 → Bloomberg/CNBC → 富途 → 金十 → 华尔街见闻直播），`write_brief.build_news_pool()` 过滤 24h 窗口后直接截取前 100 条，入池优先级实际由拼接顺序决定，国内热榜排在海外媒体之前、富途/华尔街见闻直播常被截掉。Reuters 此前只在人工流程里用 WebSearch 补充，服务器 DeepSeek 自动稿完全没有 Reuters。
