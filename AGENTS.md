@@ -19,16 +19,17 @@
    ```bash
    .venv/bin/python fetch_market.py NVDA AMD AAPL MSFT TSLA META MU  # 行情快照
    .venv/bin/python fetch_views.py > views_feed.txt                  # 最近 3 篇飞书观点
-   .venv/bin/python fetch_news.py           # alphaear + Bloomberg/CNBC RSS + Futu → news_feed.json
+   .venv/bin/python fetch_news.py           # Bloomberg/CNBC RSS + Reuters + Futu + 金十 + 华尔街见闻 + alphaear → news_feed.json
    .venv/bin/python fetch_calendar.py       # 金十日历 + 东方财富日历 → calendar_feed.json
    ```
 
    `fetch_calendar.py` 产出「本周财经日历」候选（见「财经日历数据源」），日历日期一律以它为准，**禁止**凭记忆或新闻推断填写。
-   脚本 `fetch_market.py` 会在真正开始时固化北京时间 `run_started_at`，并更新本目录的 `market_snapshot.json`；行情数据源为国内可直连固定链接（见"行情数据源"），不依赖 VPN。`fetch_news.py` 聚合 alphaear（财联社/华尔街见闻/雪球热榜）、Bloomberg/CNBC RSS 和富途牛牛新闻搜索（futu-news-search，公共 HTTP 接口，无需 OpenD 或鉴权）。
+   脚本 `fetch_market.py` 会在真正开始时固化北京时间 `run_started_at`，并更新本目录的 `market_snapshot.json`；行情数据源为国内可直连固定链接（见"行情数据源"），不依赖 VPN。`fetch_news.py` 聚合 Bloomberg/CNBC RSS、Reuters（官方 news sitemap，Bing News 兜底）、富途牛牛新闻搜索（futu-news-search，公共 HTTP 接口，无需 OpenD 或鉴权）、金十、华尔街见闻美股直播和 alphaear（财联社/华尔街见闻/雪球热榜）。
 2. 采集新闻与观点；行情数值只采用第一步结果。`08:20` 只是定时任务的计划触发时刻，不是内容截止点。以 `market_snapshot.json.run_started_at` 为本次统一 `as_of`，只允许使用 `[as_of-24小时, as_of]` 内发布或更新的新闻。
    - 不得连接、搜索或读取 Gmail 及任何邮件来源；邮件通讯不进入候选池。
    - 仅允许有明确发布时间且带时区的信息进入正文。超过 24 小时、晚于本期截止点、只有日期没有具体时间，或无法确认发布时间的信息一律剔除。
-   - 新闻来源固定使用：**金十数据（jin10）快讯+文章列表+关键词快讯搜索**；**alphaear 脚本聚合** 的财联社/华尔街见闻/雪球热榜和 Bloomberg/CNBC RSS；**富途牛牛 futu-news-search**（`fetch_news.py` 已并入）；**华尔街见闻·美股直播**（`api-one.wallstcn.com/apiv1/content/lives?channel=us-stock-channel`，`fetch_news.py` 已并入）；**Reuters 通过 WebSearch(domain:reuters.com) 限定域名获取**（Reuters 无公开 RSS 且反爬，脚本不抓取）；**财联社深度页 cls.cn/depth?id=1007** 由 WebFetch（走 Anthropic 代理）获取，脚本不直连（有反爬）；**WebSearch** 还用于当日焦点深度事件核验。不使用新浪财经新闻搜索（余额不稳定），不派生代理。
+   - **海外一手媒体优先**：Bloomberg/Reuters/CNBC 为一级来源，优先入池（最多 60/100 席）；富途、金十、华尔街见闻美股直播为二级；财联社/华尔街见闻/雪球热榜为三级。同一事件多源报道时，事实、数字、时间以海外一手媒体为准，国内来源只补充 A 股/港股/国内政策视角。
+   - 新闻来源固定使用：**Bloomberg/CNBC RSS**；**Reuters 官方 news sitemap**（`fetch_news.py` 已并入，不可达时退回 Bing News `site:reuters.com`）；**金十数据（jin10）快讯+文章列表+关键词快讯搜索**；**alphaear 脚本聚合** 的财联社/华尔街见闻/雪球热榜；**富途牛牛 futu-news-search**（`fetch_news.py` 已并入）；**华尔街见闻·美股直播**（`api-one.wallstcn.com/apiv1/content/lives?channel=us-stock-channel`，`fetch_news.py` 已并入）；**WebSearch(domain:reuters.com)** 用于人工流程补充核验 Reuters 原文（文章页反爬，脚本只取 sitemap 标题与时间）；**财联社深度页 cls.cn/depth?id=1007** 由 WebFetch（走 Anthropic 代理）获取，脚本不直连（有反爬）；**WebSearch** 还用于当日焦点深度事件核验。不使用新浪财经新闻搜索（余额不稳定），不派生代理。
    - 搜索全流程最多 5 组（AI/科技与宏观必查，地缘仅有实质进展时查，焦点深挖最多 2 组），同一主题不得换关键词重复搜索。
    - 这 5 组搜索应**一次性并行发出**，不要串行等待。第一阶段搜完筛选后，用一个并行批次拉取 5-8 篇关键文章原文核验。
    - 常规简报不得使用代理继续派生代理。
@@ -44,7 +45,7 @@
    - 初稿目标 6,300–6,600 字，最终硬范围为 6,000–7,000 字。alert 与单段长度均按去掉轻量标记后的读者可见正文计算；单段目标用于引导生成，结构阶段只拦截少于 100 个可见字符的明显碎段，最终篇幅仍以整稿硬范围为准。
    - 首次构建后查看分段字数统计，按比例一次性调整到位（例如 focus 948 字超了，看哪些板块超出目标比例最多就砍哪里）。
    - 全程构建最多 3 次。**不要逐字微调**——看到超限优先压缩最大板块的重复背景，欠字优先扩写 ai_tech 或 focus 的交叉验证；仅在不违反 bullet 数量范围时整段增删。
-5. 人工运行发布前须取得用户当次确认：`.venv/bin/python publish_wechat.py YYYYMMDD` 会创建公众号草稿并发送飞书通知。已获用户明确授权的每日自动任务可直接发布当天草稿；失败时不得重复创建。
+5. 发布只在腾讯云服务器进行（云端写稿会话只交接，不发布）。人工运行发布前须取得用户当次确认：`.venv/bin/python publish_wechat.py YYYYMMDD` 会创建公众号草稿并发送飞书通知。已获用户明确授权的每日自动任务可直接发布当天草稿；失败时不得重复创建。
 6. 需要修订已有草稿时，使用 `.venv/bin/python publish_wechat.py --update YYYYMMDD MEDIA_ID`；必须更新原草稿，禁止用新建草稿替代修订。
 
 ## 内容规则
@@ -68,7 +69,7 @@
 - **强调色硬规则**：alert 至少 2 处；每条 bullet 至少 1 处，`focus` / `ai_tech` 合计至少达到每条平均 2 处。`red` 只标上涨、改善、利多，`green` 只标下跌、恶化、利空，`c` 标关键事实、机构观点、核心结论或验证条件；每处只包住不超过 40 字的数字或短语，禁止整段着色。`**粗体**` 不计入强调色数量。`write_brief.py` 会在模型遗漏时只圈选既有短语补 `c` 色，不增删或改写可见正文；`build_brief.py`、`publish_wechat.py` 继续使用同一 `content_validation.py` 硬拦截未达标内容。
 - 修改渲染器时，微信彩框必须使用 `<section>` 与 `background-color`；不要改成 `<div>`/`<p>` 彩框或 `background` 简写。
 - 每次修改流程或脚本，在本目录 `CHANGELOG.md` 顶部记录原因和影响；git 提交信息可以简短，不替代 `CHANGELOG.md` 里的原因与影响说明。
-- 本项目使用本地 Git 仓库做版本管理，范围限于代码、规则与模板：`*.py`、`AGENTS.md`、`README.md`、`CHANGELOG.md`、`content_template.json`、`docs/`、`wechat_fragments/`、`requirements.txt`、`run_brief.sh`。
+- 本项目使用本地 Git 仓库做版本管理，范围限于代码、规则与模板：`*.py`、`AGENTS.md`、`README.md`、`CHANGELOG.md`、`content_template.json`、`docs/`、`wechat_fragments/`、`requirements.txt`、`run_brief.sh`、`cloud_collect.sh`、`server_publish.sh`。
   - 每日抓取/生成的运行数据与产出物（`content_YYYYMMDD.json`、`wechat_article_YYYYMMDD.html`、`market_snapshot.json`、`news_feed.json`、`calendar_feed.json`、`views_feed.json`、`qdii_cache.json`）、`.venv/`、`__pycache__/`、`backups/`、`.secrets.env`、`.claude/settings.local.json` 由 `.gitignore` 排除，不纳入版本管理——这些要么可重新生成，要么已用文件名日期自成历史，要么含机器本地路径或密钥。
   - 提交前用 `git status` 确认暂存内容，不要用 `git add -A`/`git add .` 整批加入，避免误提交上述排除范围。
   - 本地仓库当前无远程；如需推送到服务器或建立远程仓库，需先与用户确认。
@@ -110,13 +111,15 @@
 
 ## 行情数据源
 
-- `fetch_market.py` 是行情唯一写入入口，不依赖 Yahoo/yfinance；当前新浪、东方财富和 CBOE 的逐项映射及新鲜度口径见 `README.md`「行情口径」。
+- `fetch_market.py` 是行情唯一写入入口，不依赖 yfinance；除 VIX 外不使用 Yahoo。VIX 为 Yahoo chart 优先、CBOE 兜底（服务器 IP 常被 Yahoo 429，届时自动走 CBOE）；当前新浪、东方财富、Yahoo 和 CBOE 的逐项映射及新鲜度口径见 `README.md`「行情口径」。
 - 东方财富请求必须使用 `push2delay` 延时主机，禁止换成易限流空响应的 `push2`；东财失败时仅允许退回脚本内置的新浪兜底代码（`hf_OIL` / `globalbd_us10yt` / `DINIW`）；任何核心标的缺失或错位都应硬失败，不得从新闻或旧快照补值。
 
-## 服务器定时运行
+## 生产调度（云端写稿 + 服务器发布）
 
-- 唯一生产任务在服务器 `115.159.56.153`，北京时间每日 08:20 由 cron 触发 `run_brief.sh`；本机调度保持停用，禁止形成两个发布者。完整操作说明见 `README.md` 与脚本头部。
-- 服务器 `.secrets.env`（chmod 600）必填 `DEEPSEEK_API_KEY`；`JIN10_MCP_TOKEN`、`LARK_APP_ID`、`LARK_APP_SECRET` 按数据源需要选配。cron 重定向前必须先创建 `logs/`。
-- `fetch_views.py` 失败属于非致命告警；行情、新闻或财经日历失败（`fetch_calendar.py` 重试一次仍失败）、结构/字数校验失败、构建失败均必须终止。DeepSeek 自动稿没有实时 WebSearch，发布前建议复核关键数字。
-- 本机工作副本是唯一权威修改处；脚本、规则或文档变更必须测试后同步服务器，禁止直接在服务器形成长期分叉。
+- **写稿在 Claude Code cloud**：定时 Routine 于北京时间每日 08:20 新开会话，运行 `origin/main` 最新代码：`cloud_collect.sh` 采集 → Claude 按本文件写 `content_YYYYMMDD.json` → `build_brief.py` 构建与终检 → `cloud_handoff.py YYYYMMDD` 把成稿推到 GitHub `briefs` 分支；任何关键环节失败用 `cloud_handoff.py YYYYMMDD --failed "原因"` 交接失败标记。云端**绝不**运行 `publish_wechat.py`。Routine 提示词、上线步骤与安全边界见 [`docs/cloud-routine.md`](docs/cloud-routine.md)。
+- **发布在腾讯云服务器 `115.159.56.153`**（微信 API IP 白名单所在）：cron 在北京时间 08:00–09:00 每 5 分钟运行 `server_publish.sh`（窗口外脚本直接退出，当天草稿建好后后续轮次在拉取前退出），从 `/home/ubuntu/brief-inbox`（GitHub 克隆）拉 `briefs` 分支，拿到当日 `READY.json` 后执行 `publish_wechat.py`（发布前终检照旧），每天只建一次草稿；收到 `FAILED.txt`、08:50 仍无成稿、拉取失败或发布失败时飞书告警。
+- 服务器不再挂 `run_brief.sh` 的 cron；它保留为云端整天不可用时的**手动应急通道**（DeepSeek 写稿），与 Routine 同一天只能二选一，禁止形成两个发布者。本机调度保持停用。
+- 云端环境变量：`JIN10_MCP_TOKEN`、`LARK_APP_ID`、`LARK_APP_SECRET` 按数据源需要配置（在环境设置里添加，不写入仓库）；云端写稿不需要 `DEEPSEEK_API_KEY`。服务器 `.secrets.env`（chmod 600）只在走应急通道时需要 `DEEPSEEK_API_KEY`。cron 重定向前必须先创建 `logs/`。
+- `fetch_views.py` 失败属于非致命告警；行情、新闻或财经日历失败（`fetch_calendar.py` 重试一次仍失败）、结构/字数校验失败、构建失败均必须终止并交接 FAILED。DeepSeek 应急稿没有实时 WebSearch，发布前建议复核关键数字。
+- 代码以 GitHub `main` 为准（Routine 每次拉取最新 main）；脚本、规则或文档变更必须测试后合并到 main，并同步服务器（服务器用到 `publish_wechat.py`、`build_brief.py`、`content_validation.py`、`wechat_fragments/`、`server_publish.sh`），禁止直接在服务器形成长期分叉。`briefs` 分支只放每日运行产物，不放代码。
 - 同步方式：本机仓库已配置 `production` remote（`ssh://ubuntu@115.159.56.153/home/ubuntu/finance-brief.git`，走裸仓库 `post-receive` hook 自动 `checkout -f` 到 `/home/ubuntu/finance-brief`），改完代码/规则后本机执行 `git push production main` 即可单向同步；服务器不会反向推送，每日抓取生成的运行数据不受影响。`core.sshCommand` 已在本地仓库配置指向 `~/.ssh/lct_cloud`，无需每次手动指定密钥。

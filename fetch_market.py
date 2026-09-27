@@ -10,7 +10,8 @@
 - 10年美债收益率：东方财富 push2delay `171.US10Y`，失败时退回新浪 `globalbd_us10yt`
 - 美元指数：东方财富 push2delay `100.UDI`，失败时退回新浪 `DINIW`
   （东财会对部分云服务器 IP 直接断开 TLS 连接，新浪兜底保证服务器可取数）
-- 恐慌指数 VIX：CBOE 官方日线 CSV（cdn.cboe.com，每日收盘）
+- 恐慌指数 VIX：Yahoo Finance chart `^VIX` 优先（盘中实时、收盘即有值）；Yahoo 不可达（如服务器 IP 被 429）
+  时依次退回 CBOE 官方延时报价 JSON、CBOE 日线 CSV
 
 口径与校验逻辑与原 yfinance 版本保持一致：run_started_at 在脚本真正开始时固化、
 动态24h新闻窗口、盘中报价延迟>30分钟或休市报价>7天即无效、单标错误写无效快照、
@@ -38,6 +39,7 @@ NY_TZ = ZoneInfo("America/New_York")
 UTC = dt.timezone.utc
 PROVIDER_SINA = "Sina Finance hq (gb_$)"
 PROVIDER_GOLD = "Sina Finance hq (hf_XAU)"
+PROVIDER_YAHOO_VIX = "Yahoo Finance chart API (^VIX)"
 PROVIDER_CBOE = "CBOE official delayed quote JSON"
 PROVIDER_CBOE_CSV = "CBOE official daily CSV"
 PROVIDER_EM = "EastMoney push2delay quote API"
@@ -48,13 +50,13 @@ ACTIVE_STATES = {"盘前", "交易中", "盘后"}
 
 # (logical_symbol, 展示名, 资产类型, 数据源)
 # 数据源格式: ("sina", "gb_$inx") | ("sina", "gb_<ticker>") | ("sina_hf", "hf_XAU")
-#             | ("eastmoney", "<secid>", "<新浪兜底代码>") | ("cboe", None)
+#             | ("eastmoney", "<secid>", "<新浪兜底代码>") | ("vix", None)
 CORE = [
     ("^GSPC", "标普500", "index", ("sina", "gb_$inx")),
     ("^IXIC", "纳斯达克综合", "index", ("sina", "gb_$ixic")),
     ("^DJI", "道琼斯", "index", ("sina", "gb_$dji")),
     ("^SOX", "费城半导体", "index", ("sina", "gb_$sox")),
-    ("^VIX", "恐慌指数", "index", ("cboe", None)),
+    ("^VIX", "恐慌指数", "index", ("vix", None)),
     ("XAUUSD", "黄金/美元", "spot_gold", ("sina_hf", "hf_XAU")),
     ("BZ=F", "ICE布伦特原油期货", "commodity", ("eastmoney", "112.B00Y", "hf_OIL")),
     ("^TNX", "10年美债收益率指数", "yield", ("eastmoney", "171.US10Y", "globalbd_us10yt")),
@@ -70,6 +72,8 @@ SINA_HEADERS = {
     "Referer": "https://finance.sina.com.cn/",
 }
 EM_URL = "https://push2delay.eastmoney.com/api/qt/stock/get?secid={secid}&fltt=2&invt=2&fields=f43,f44,f45,f46,f57,f58,f60,f86"
+YAHOO_VIX_URL = "https://query1.finance.yahoo.com/v8/finance/chart/%5EVIX?range=1d&interval=5m"
+YAHOO_HEADERS = {"User-Agent": "Mozilla/5.0"}
 CBOE_VIX_QUOTE_URL = "https://cdn.cboe.com/api/global/delayed_quotes/quotes/_VIX.json"
 CBOE_VIX_HISTORY_URL = "https://cdn.cboe.com/api/global/us_indices/daily_prices/VIX_History.csv"
 
@@ -264,6 +268,35 @@ def fetch_spot_gold(run_started_at: dt.datetime) -> dict:
     }
 
 
+def fetch_yahoo_vix(run_started_at: dt.datetime) -> dict:
+    """Yahoo Finance chart API 的 ^VIX。meta.regularMarketPrice 为最新价（盘中约 15 分钟延时、
+    收盘后即为收盘值），meta.regularMarketTime 为报价时间戳，meta.previousClose 为前收盘。"""
+    payload = json.loads(http_text(YAHOO_VIX_URL, headers=YAHOO_HEADERS, timeout=10))
+    result = ((payload.get("chart") or {}).get("result") or [None])[0]
+    if not result:
+        raise RuntimeError("Yahoo VIX 返回为空：%s" % ((payload.get("chart") or {}).get("error")))
+    meta = result.get("meta") or {}
+    if meta.get("symbol") != "^VIX":
+        raise RuntimeError("Yahoo VIX 返回标的错位：%s" % meta.get("symbol"))
+    price = finite_number(meta.get("regularMarketPrice"))
+    previous_close = finite_number(meta.get("previousClose"))
+    if previous_close is None:
+        previous_close = finite_number(meta.get("chartPreviousClose"))
+    if price is None or price <= 0 or previous_close is None or previous_close <= 0:
+        raise RuntimeError("Yahoo VIX 最新价/昨收无效")
+    timestamp = finite_number(meta.get("regularMarketTime"))
+    if timestamp is None or timestamp <= 0:
+        raise RuntimeError("Yahoo VIX 缺 regularMarketTime")
+    quote_time = dt.datetime.fromtimestamp(timestamp, UTC).astimezone(BRIEF_TZ)
+    state = index_state(quote_time, run_started_at)
+    check_freshness(run_started_at, quote_time, state, "恐慌指数(VIX)")
+    return make_row(
+        "^VIX", "^VIX", "恐慌指数", "index", price, previous_close, quote_time,
+        quote_time.astimezone(NY_TZ).date().isoformat(), state, "较前收盘", PROVIDER_YAHOO_VIX,
+        "chart meta.regularMarketPrice（昨收=meta.previousClose）",
+    )
+
+
 def fetch_cboe_vix_quote(run_started_at: dt.datetime) -> dict:
     """CBOE 官方实时延时报价 JSON。收盘（16:15 ET）后立即带最新收盘值，
     避免历史 CSV 每日发布滞后（约收盘后 5 小时、晚于 08:20 采集）导致 VIX 落后价格指数一个交易日。"""
@@ -335,6 +368,18 @@ def fetch_cboe_vix(run_started_at: dt.datetime) -> dict:
             raise RuntimeError(
                 "CBOE VIX 实时源与历史源均失败：%s ／ %s" % (primary_exc, fallback_exc)
             ) from fallback_exc
+
+
+def fetch_vix(run_started_at: dt.datetime) -> dict:
+    """VIX 优先取 Yahoo（盘中实时，且不受 CBOE JSON 停更影响）；Yahoo 任何失败退回 CBOE 两级兜底。"""
+    try:
+        return fetch_yahoo_vix(run_started_at)
+    except Exception as yahoo_exc:  # noqa: BLE001 - Yahoo 任何失败都尝试 CBOE 兜底
+        print("! %-10s Yahoo失败（%s），改用 CBOE" % (VIX_SYMBOL, yahoo_exc), file=sys.stderr)
+        try:
+            return fetch_cboe_vix(run_started_at)
+        except Exception as cboe_exc:
+            raise RuntimeError("Yahoo失败：%s；%s" % (yahoo_exc, cboe_exc)) from cboe_exc
 
 
 def fetch_eastmoney(secid: str, name: str, kind: str, run_started_at: dt.datetime) -> dict:
@@ -459,8 +504,8 @@ def fetch_one(symbol: str, name: str, kind: str, source: tuple, run_started_at: 
         return fetch_sina_us(code, name, kind, run_started_at)
     if source_type == "sina_hf":
         return fetch_spot_gold(run_started_at)
-    if source_type == "cboe":
-        return fetch_cboe_vix(run_started_at)
+    if source_type == "vix":
+        return fetch_vix(run_started_at)
     if source_type == "eastmoney":
         try:
             return fetch_eastmoney(code, name, kind, run_started_at)

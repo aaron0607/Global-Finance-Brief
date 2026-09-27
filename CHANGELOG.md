@@ -1,5 +1,41 @@
 # 变更记录
 
+## 2026-09-27 · 服务器发布轮询窗口收窄到 08:00–09:00，08:50 未收到成稿即告警
+
+- **原因**：用户要求腾讯云只在北京时间 08:00–09:00 每 5 分钟拉取一次，拿到成稿发布后即停止；08:50 仍未收到云端成稿就飞书告警（原为 08:00–10:55 轮询、10:30 告警）。
+- **改动**：`server_publish.sh` 默认 `BRIEF_DEADLINE=0850`；新增轮询窗口 `BRIEF_WINDOW_START=0800` / `BRIEF_WINDOW_END=0900`，窗口外直接退出（手动补发用 `BRIEF_FORCE=1` 跳过）；cron 示例改为 `*/5 8 * * *` + `0 9 * * *`。当天已发布或发布失败后，后续轮次在拉取 GitHub 之前就退出（原逻辑不变）。
+- **影响**：Routine 08:20 触发，Claude 写稿+最多 3 次构建需要在约 30 分钟内交接，否则 08:50 会先收到"未收到成稿"告警；08:50–09:00 之间到达的成稿仍会正常发布；09:00 之后到达的需人工 `BRIEF_FORCE=1 ./server_publish.sh` 补发。AGENTS.md、`docs/cloud-routine.md` 同步更新。
+
+## 2026-09-27 · 生产调度迁移：Claude Code cloud 写稿，腾讯云服务器只发布
+
+- **原因**：用户决定把写稿迁到 Claude Code cloud，每天北京时间 08:20 自动执行，由 Claude 按 AGENTS.md 人工流程写稿（可用 WebSearch 核验、读 Reuters 原文，质量高于 DeepSeek 自动稿）；腾讯云服务器因微信 API IP 白名单只负责发布公众号草稿。
+- **交接方式裁决**：云端容器出站只有 HTTPS 代理，实测到服务器 `115.159.56.153:22` 不通，无法沿用 `publish_wechat.py` 的 scp/ssh 路径；改经 GitHub 交接：云端推送孤儿分支 `briefs`（只放 `briefs/YYYYMMDD/` 运行产物），服务器定时 `git fetch` 拉取。云端实测可推送 `briefs` 分支；行情、新闻、日历、QDII（fundgz）、飞书、金十接口在云端均可达。
+- **新增**：
+  - `cloud_collect.sh`：云端 Phase 1，建 venv、并行采集、行情/日历重试一次，关键采集失败 rc=1（口径同 `run_brief.sh`）。
+  - `cloud_handoff.py`：交接前做与 `publish_wechat.py` 相同的终检（结构残留、强调色、日历、成稿终检），在临时 worktree 基于最新 `origin/briefs` 提交 `content`、`html`、`READY.json`（as_of、标题、代码版本、交接时间）并推送，非快进重试 4 次；`--failed` 交接失败原因；同日已有不同 READY 时拒绝覆盖；推送返回失败但实际已落地时，重试识别为同一内容视为成功。
+  - `server_publish.sh`：服务器 cron 每 5 分钟，flock 防并发；拿到当日 READY 后取出文件执行 `publish_wechat.py`，成功/失败都写状态文件、每天只建一次草稿、发布失败不重试；`FAILED.txt`、10:30（`BRIEF_DEADLINE`）无成稿、拉取失败、发布失败均飞书告警且同类只发一次；FAILED 之后云端补推 READY 仍会正常发布。
+  - `docs/cloud-routine.md`：分工表、安全边界、上线顺序与 Routine 提示词原文。
+- **规则**：AGENTS.md「服务器定时运行」改为「生产调度」；服务器不再挂 `run_brief.sh` cron（保留为手动应急通道，与 Routine 同日二选一）；代码以 GitHub main 为准；第 5 步注明发布只在服务器进行。
+- **事故与修复（开发期间）**：`test_cloud_handoff.py` 初版因 `git()` 默认参数 `cwd=BASE` 在定义时绑定，mock BASE 无效，测试把假数据推到了真实 `briefs` 分支（`briefs/20260928` READY、`20260929` FAILED）。服务器轮询尚未部署，未造成发布；已用普通提交删除这些文件（force push 被拒，历史保留），并把 `cwd` 改为调用时解析，测试确认不再触碰真实远端。
+- **验证**：本地裸仓库模拟 GitHub 做端到端演练：交接 READY → 服务器两轮轮询只调用一次发布；FAILED → 只告警一次且不发布；截止时间无成稿 → 只告警一次。`test_cloud_handoff.py` 3 项、`test_news_sources.py` 10 项、`test_write_brief.py` 52 项、`test_market_alignment.py` 27 项、`test_calendar.py` 22 项通过。
+
+## 2026-09-27 · 新闻池改为海外一手媒体优先，接入 Reuters
+
+- **原因**：`fetch_news.py` 按固定顺序拼接（alphaear 热榜 → Bloomberg/CNBC → 富途 → 金十 → 华尔街见闻直播），`write_brief.build_news_pool()` 过滤 24h 窗口后直接截取前 100 条，入池优先级实际由拼接顺序决定，国内热榜排在海外媒体之前、富途/华尔街见闻直播常被截掉。Reuters 此前只在人工流程里用 WebSearch 补充，服务器 DeepSeek 自动稿完全没有 Reuters。
+- **Reuters 接入**：实测 `reuters.com/arc/outboundfeeds/news-sitemap/?outputType=xml&from=N` 可直连（HTTP 200，每页 50 条、按时间倒序、带精确 `news:publication_date`，约 18 页覆盖 48h）。新增 `fetch_reuters()`：翻页至 26h 截止点（上限 20 页/60 秒），按 URL 前缀白名单保留 `business/ markets/ technology/ commentary/breakingviews/ world/us/ world/china/ world/middle-east/`，排除体育、多语种版和 `business/environment/`（天气灾害），最多 40 条。sitemap 失败或 0 条时退回 Bing News RSS（`site:reuters.com` 多组关键词、按时间排序），只收 `News:Source=Reuters` 的真实文章 URL，且 URL 日期与 pubDate 相差不超过 1 天（Bing pubDate 实测有数小时偏差，只作兜底）。两者都失败时 Reuters 为 0 条，不阻断任务。Google News RSS 可用但国内服务器大概率不可达，未采用。
+- **分级入池**：`write_brief.SOURCE_TIERS` 定义一级海外一手（bloomberg/reuters/cnbc）、二级国内实时快讯（富途/金十/华尔街见闻直播）、三级国内热榜（财联社/华尔街见闻/雪球，未登记来源同级）。池内按（级别, 发布时间倒序）排序、按标题去重（同题保留高等级来源）；一级最多 `OVERSEAS_CAP`=60 席，给 A 股/国内视角保留至少 40 席，二三级不足时再由剩余海外条目补满 100 条。
+- **写稿提示词**：新闻池每行增加来源名；新增第 11 条"海外一手媒体优先"——英文原文准确译成中文，同一事件以海外一手媒体的事实、数字、时间为准，国内来源只补充 A 股/港股/国内政策视角；"正文不得出现来源转述"红线不变。原第 11-13 条顺延为 12-14。
+- **顺带修复**：RSS 解析 `_strip_html` 只解码 4 种实体，CNBC 标题残留 `&apos;`；改用 `html.unescape`。
+- **影响**：本机实测 `fetch_news.py` 8 秒完成，Reuters 36 条；新闻池 100 条中海外 60 条（Reuters 26 / Bloomberg 17 / CNBC 17）、国内 40 条。周日窗口内国内二级来源已占满 40 席，三级热榜（含财联社 A 股快讯）可能不入池——如 A 股覆盖不足，可调低 `OVERSEAS_CAP` 或把财联社调到二级。**生产服务器（国内 IP）能否直连 reuters.com / bloomberg.com 未验证**，同步后需看日志 `reuters:` 与 `rss/bloomberg:` 条数。
+- **回归**：新增 `test_news_sources.py` 10 项（sitemap 解析/栏目过滤/时区、翻页判停、sitemap 失败退 Bing、Bing 来源与日期一致性过滤、HTML 实体解码、海外优先排序、海外上限、海外补位、窗口外与重复剔除、未知来源分级）；`test_write_brief.py` 52 项、`test_market_alignment.py` 27 项、`test_calendar.py` 22 项均通过。
+
+## 2026-09-24 · VIX 改为 Yahoo 优先、CBOE 两级兜底
+
+- **现象**：北京时间 09-24 22:54 采集时，CBOE 实时延时报价 JSON（`_VIX.json`）的 `last_trade_time` 仍停在 `2026-09-22T16:15:01`，快照 VIX=14.21 落后价格指数两个交易日（age 2559 分钟）；因在 ≤3 自然日滞后容忍内，快照仍判 valid，读者看到的是旧值。同时 Yahoo `^VIX` 连续 5 次 HTTP 200，盘中值 15.68、前收 15.18。
+- **修复**：`fetch_market.py` 新增 `fetch_yahoo_vix()` 与 `fetch_vix()` 调度：Yahoo chart API 优先（`regularMarketPrice` 为最新价、`previousClose` 为昨收、`regularMarketTime` 定报价时间与纽约交易日，校验返回标的必须是 `^VIX`）；Yahoo 任何失败（含 429、空结果、盘中延迟 >30 分钟被新鲜度校验拒绝）即 stderr 告警并退回原有 CBOE JSON → CBOE CSV 链路，三源全挂才硬失败。`CORE` 中 VIX 源类型由 `cboe` 改为 `vix`。`provider` 记为 `Yahoo Finance chart API (^VIX)` 便于审计。
+- **影响**：本机/可达 Yahoo 的环境 VIX 与价格指数同日对齐且盘中实时；生产服务器（腾讯云 IP，2026-09-11 实测 Yahoo 429）预计仍走 CBOE 兜底，每次多一次约秒级失败请求，行为与此前一致——CBOE JSON 停更问题在服务器侧未解决，仍由 VIX 滞后校验容错并在表头标注"VIX截至X月X日"。成稿页脚数据来源文案不变（VIX 本身由 CBOE 编制）。
+- **回归**：`test_market_alignment.py` 新增 5 项（Yahoo 优先解析、Yahoo 429 退 CBOE、盘中陈旧报价退 CBOE、标的错位/空结果拦截、三源全挂抛错），全套 27 项通过；`test_calendar.py` 22 项、`test_write_brief.py` 52 项通过。真实采集生成 valid 快照，VIX=15.75/+3.75%/session 2026-09-24，provider=Yahoo。
+
 ## 2026-09-24 · 布油/美债/美元指数增加新浪兜底：东财封禁服务器 IP
 
 - **线上现象**：`20260924` 08:20 服务器任务报"行情获取失败"：`BZ=F` / `^TNX` / `DX-Y.NYB` 三项均为 `Remote end closed connection without response`，重试一次仍失败，写入 invalid 快照后终止。其余标的（新浪、CBOE）正常。

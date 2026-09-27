@@ -24,7 +24,7 @@ python3 -m venv .venv
 .venv/bin/python build_brief.py content_YYYYMMDD.json
 ```
 
-`fetch_market.py` 是行情数据的唯一写入入口；`fetch_views.py` 用于读取最新投资观点，事件本身仍按媒体原意客观呈现。`fetch_news.py` 聚合 alphaear（财联社/华尔街见闻/雪球热榜）、Bloomberg/CNBC RSS、富途牛牛新闻搜索（futu-news-search）与华尔街见闻美股直播，并在配置 `JIN10_MCP_TOKEN` 时并入金十数据快讯，输出 `news_feed.json`。人工研究流程可用 `WebSearch(domain:reuters.com)` 补充 Reuters；服务器 cron 无实时 WebSearch，不含该补充链路。
+`fetch_market.py` 是行情数据的唯一写入入口；`fetch_views.py` 用于读取最新投资观点，事件本身仍按媒体原意客观呈现。`fetch_news.py` 聚合 Bloomberg/CNBC RSS、Reuters（官方 news sitemap `reuters.com/arc/outboundfeeds/news-sitemap/`，按栏目白名单保留财经/科技/美中中东国际新闻、近 26 小时、最多 40 条；sitemap 不可达时退回 Bing News RSS `site:reuters.com`，并要求 URL 日期与 pubDate 相差不超过 1 天）、富途牛牛新闻搜索（futu-news-search）、华尔街见闻美股直播与 alphaear（财联社/华尔街见闻/雪球热榜），并在配置 `JIN10_MCP_TOKEN` 时并入金十数据快讯，输出 `news_feed.json`。新闻池按来源分级入池（`write_brief.build_news_pool`）：一级海外一手媒体 Bloomberg/Reuters/CNBC 优先、最多 60 席；二级国内实时快讯（富途、金十、华尔街见闻美股直播）；三级国内聚合热榜（财联社/华尔街见闻/雪球）；二三级不足时由剩余海外条目补满 100 条。同一事件多源时，事实、数字、时间以海外一手媒体为准。人工研究流程仍可用 `WebSearch(domain:reuters.com)` 补充核验。
 
 `fetch_calendar.py` 是「本周财经日历」的唯一写入入口，输出 `calendar_feed.json`：主源为金十数据日历（jin10 MCP `list_calendar`，本自然周经济数据带 1-5 星重要性，需 `JIN10_MCP_TOKEN`），兜底与跨周补充为东方财富财经日历（`RPT_CPH_FECALENDAR`，免鉴权，含会议/发布会等事件）。脚本剔除国债竞拍、周度库存分项与 ISM 分项等噪音，按重要性、地区权重和关键指标打分，合并同一时刻同地区的数据行，默认给出未来 7 天内最多 5 条。`write_brief.py` 用它确定性回填 `calendar`，模型不再决定日期；日历源不可用时写稿直接终止。
 
@@ -81,12 +81,12 @@ python3 -m venv .venv
 ]
 ```
 
-`published_at` 必须是带时区的 ISO 8601 时间。每个正文板块都要有来源映射；来源早于 `as_of-24小时`、晚于 `as_of`，或无法确认具体发布时间时，生成器会停止构建。新闻来源：金十数据（jin10，配置 `JIN10_MCP_TOKEN` 时）、alphaear 聚合（财联社/华尔街见闻/雪球热榜）、Bloomberg/CNBC RSS、富途牛牛新闻搜索与华尔街见闻美股直播。人工研究流程可通过 `WebSearch(domain:reuters.com)` 补充 Reuters；任务不得连接、搜索或读取 Gmail 及任何邮件来源。
+`published_at` 必须是带时区的 ISO 8601 时间。每个正文板块都要有来源映射；来源早于 `as_of-24小时`、晚于 `as_of`，或无法确认具体发布时间时，生成器会停止构建。新闻来源：Bloomberg/CNBC RSS、Reuters（官方 news sitemap，Bing News 兜底）、富途牛牛新闻搜索、金十数据（jin10，配置 `JIN10_MCP_TOKEN` 时）、华尔街见闻美股直播与 alphaear 聚合（财联社/华尔街见闻/雪球热榜），海外一手媒体优先入池。人工研究流程可通过 `WebSearch(domain:reuters.com)` 补充核验 Reuters；任务不得连接、搜索或读取 Gmail 及任何邮件来源。
 
 ## 行情口径
 
-`fetch_market.py` 使用国内可直连的结构化行情源生成快照（2026-08-06 起免 VPN，不依赖 yfinance/Yahoo）：美股指数/个股用新浪 `gb_$`（`gb_$inx`/`gb_$sox` 等）；黄金/美元现货用新浪 `hf_XAU`；布伦特原油、10 年美债收益率、美元指数用东方财富 `push2delay`（`112.B00Y` / `171.US10Y` / `100.UDI`），东财不可达时逐项退回新浪 `hf_OIL` / `globalbd_us10yt` / `DINIW`（东财会对部分云服务器 IP 直接断开 TLS）；恐慌指数用 CBOE 官方实时延时报价 JSON（`delayed_quotes/quotes/_VIX.json`，收盘即有值，避免历史日线 CSV 发布滞后一日；实时源异常时退回 `VIX_History.csv` 兜底）。每项都记录 ticker、报价时间、市场状态、前收盘/前结算参考价和数据来源。交易时段内报价延迟超过 30 分钟、休市报价超过 7 天或任一核心标的缺数时，脚本会写入无效快照并阻止构建。新简报禁止在 content JSON 手填行情，也禁止从新闻、搜索摘要或截图补价。
+`fetch_market.py` 使用国内可直连的结构化行情源生成快照（2026-08-06 起免 VPN，不依赖 yfinance；仅 VIX 优先尝试 Yahoo）：美股指数/个股用新浪 `gb_$`（`gb_$inx`/`gb_$sox` 等）；黄金/美元现货用新浪 `hf_XAU`；布伦特原油、10 年美债收益率、美元指数用东方财富 `push2delay`（`112.B00Y` / `171.US10Y` / `100.UDI`），东财不可达时逐项退回新浪 `hf_OIL` / `globalbd_us10yt` / `DINIW`（东财会对部分云服务器 IP 直接断开 TLS）；恐慌指数优先用 Yahoo Finance chart `^VIX`（`query1.finance.yahoo.com/v8/finance/chart/%5EVIX`，盘中约 15 分钟延时、收盘即有值；取 `meta.regularMarketPrice` / `previousClose` / `regularMarketTime`），Yahoo 任何失败（服务器 IP 常见 429）或未过新鲜度校验时退回 CBOE 官方实时延时报价 JSON（`delayed_quotes/quotes/_VIX.json`），再异常退回 `VIX_History.csv`。每项都记录 ticker、报价时间、市场状态、前收盘/前结算参考价和数据来源。交易时段内报价延迟超过 30 分钟、休市报价超过 7 天或任一核心标的缺数时，脚本会写入无效快照并阻止构建。新简报禁止在 content JSON 手填行情，也禁止从新闻、搜索摘要或截图补价。
 
 客户成稿只呈现市场事实、公开数据口径和投资解读，不披露脚本、快照文件、内部文档或后台运行机制。行情总览只显示资产名称、价格和涨跌：指数表头显示实际最近交易日的“X月X日收盘”，大宗/外汇表头显示该组最新有效报价的北京时间日期“X月X日”。两组日期独立更新；周末或休市时沿用最近实际行情日期，不随简报日期自动推进。大宗/外汇表不展示 ticker、逐行报价时间、交易状态或表下行情口径说明，这些审计字段仍完整保留在快照和构建校验中。
 
-服务器自动任务的编排见 `run_brief.sh` 与 `AGENTS.md`「服务器定时运行」；Codex 项目规则以 `AGENTS.md` 为准。内容只写入 `content_YYYYMMDD.json`，禁止直接编辑 HTML。
+生产调度为「Claude Code cloud 定时写稿 + 腾讯云服务器发布」，经 GitHub `briefs` 分支交接，见 `docs/cloud-routine.md` 与 `AGENTS.md`「生产调度」；`run_brief.sh` 保留为服务器手动应急通道；Codex 项目规则以 `AGENTS.md` 为准。内容只写入 `content_YYYYMMDD.json`，禁止直接编辑 HTML。

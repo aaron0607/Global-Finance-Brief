@@ -108,6 +108,68 @@ class CboeVixQuoteTests(unittest.TestCase):
                 fetch_market.fetch_cboe_vix_quote(self.RUN)
 
 
+class YahooVixTests(unittest.TestCase):
+    RUN = dt.datetime(2026, 9, 24, 22, 54, tzinfo=fetch_market.BRIEF_TZ)
+    # 2026-09-24 14:43:01 UTC = 22:43 北京 = 10:43 ET（盘中）
+    YAHOO_JSON = json.dumps({"chart": {"result": [{"meta": {
+        "symbol": "^VIX",
+        "regularMarketPrice": 15.72,
+        "regularMarketTime": 1790260981,
+        "previousClose": 15.18,
+        "chartPreviousClose": 15.18,
+    }}], "error": None}})
+
+    def test_yahoo_is_preferred_and_parsed(self):
+        with mock.patch.object(fetch_market, "http_text", return_value=self.YAHOO_JSON) as http:
+            row = fetch_market.fetch_one("^VIX", "恐慌指数", "index", ("vix", None), self.RUN)
+        self.assertEqual(http.call_args[0][0], fetch_market.YAHOO_VIX_URL)
+        self.assertEqual(row["provider"], fetch_market.PROVIDER_YAHOO_VIX)
+        self.assertEqual(row["price_raw"], 15.72)
+        self.assertEqual(row["reference_price_raw"], 15.18)
+        self.assertEqual(row["chg"], "+3.56%")
+        self.assertEqual(row["session_date"], "2026-09-24")
+        self.assertEqual(row["market_state"], "交易中")
+        self.assertEqual(row["quote_time"], "2026-09-24T22:43:01+08:00")
+
+    def test_yahoo_failure_falls_back_to_cboe(self):
+        def side_effect(url, *args, **kwargs):
+            if url == fetch_market.YAHOO_VIX_URL:
+                raise RuntimeError("HTTP Error 429: Too Many Requests")
+            return CboeVixQuoteTests.QUOTE_JSON
+        run = dt.datetime(2026, 9, 11, 8, 20, tzinfo=fetch_market.BRIEF_TZ)
+        with mock.patch.object(fetch_market, "http_text", side_effect=side_effect), \
+                contextlib.redirect_stderr(io.StringIO()):
+            row = fetch_market.fetch_one("^VIX", "恐慌指数", "index", ("vix", None), run)
+        self.assertEqual(row["provider"], fetch_market.PROVIDER_CBOE)
+        self.assertEqual(row["session_date"], "2026-09-10")
+
+    def test_stale_intraday_yahoo_quote_falls_back(self):
+        # 盘中报价延迟 >30 分钟时 Yahoo 行被新鲜度校验拒绝，改走 CBOE
+        stale = self.YAHOO_JSON.replace("1790260981", str(1790260981 - 3600))
+        def side_effect(url, *args, **kwargs):
+            return stale if url == fetch_market.YAHOO_VIX_URL else CboeVixQuoteTests.QUOTE_JSON
+        with mock.patch.object(fetch_market, "http_text", side_effect=side_effect), \
+                mock.patch.object(fetch_market, "fetch_cboe_vix", return_value={"provider": "cboe"}) as cboe, \
+                contextlib.redirect_stderr(io.StringIO()):
+            row = fetch_market.fetch_vix(self.RUN)
+        cboe.assert_called_once()
+        self.assertEqual(row["provider"], "cboe")
+
+    def test_wrong_symbol_or_empty_result_is_rejected(self):
+        wrong = self.YAHOO_JSON.replace('"^VIX"', '"^GSPC"')
+        empty = json.dumps({"chart": {"result": None, "error": {"code": "Not Found"}}})
+        for payload in (wrong, empty):
+            with mock.patch.object(fetch_market, "http_text", return_value=payload):
+                with self.assertRaises(RuntimeError):
+                    fetch_market.fetch_yahoo_vix(self.RUN)
+
+    def test_all_sources_failing_raises(self):
+        with mock.patch.object(fetch_market, "http_text", side_effect=RuntimeError("网络失败")), \
+                contextlib.redirect_stderr(io.StringIO()):
+            with self.assertRaisesRegex(RuntimeError, "Yahoo失败"):
+                fetch_market.fetch_vix(self.RUN)
+
+
 class EastMoneySinaFallbackTests(unittest.TestCase):
     RUN = dt.datetime(2026, 9, 24, 8, 55, tzinfo=fetch_market.BRIEF_TZ)
     SINA = {
