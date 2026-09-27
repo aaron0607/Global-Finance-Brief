@@ -1,5 +1,11 @@
 # 变更记录
 
+## 2026-09-27 · 成稿人名简称：「习近平」一律写作「习」
+
+- **原因**：用户规定，今后成稿中涉及「习近平」三个字的全部缩写为「习」。
+- **改动**：`content_validation.py` 新增 `NAME_ABBREVIATIONS` 与 `apply_name_abbreviations()`（递归替换 content 全部字符串，跳过 `sources` 来源登记）、`name_abbreviation_errors()`；`build_brief.py` 载入 content 后先做替换并回写文件（保证发布入口看到的 JSON 与成稿一致），`validate_final_render()` 发现成稿残留全称即失败——`publish_wechat.py` 与 `cloud_handoff.py` 复用该终检，因此交接和发布前都会拦截。AGENTS.md 内容规则与 DeepSeek 写稿提示词同步写明。
+- **影响**：写稿端即使遗漏也会在构建时被确定性替换；服务器需 `python3 server_sync.py` 同步后，发布端拦截才生效（构建端替换在云端已随 main 生效）。
+
 ## 2026-09-27 · 云端写稿提速与口径收紧：新闻池文件、去掉原文抓取、美联储情景随事实
 
 - **计时实测（Opus 5.5，云端 Routine）**：首条命令到终检通过约 4 分 51 秒——采集 33 秒（venv/pip 6 秒）、读数据与筛选 40 秒、5 组搜索 + 11 篇原文抓取 41 秒（10 篇被 CNBC/NPR/Schwab/富途拦截或无正文）、首稿 1 分 27 秒、构建 3 次（第 1 次因一条早于 24 小时窗口 50 分钟的来源失败，第 2 次因 5,812 字低于下限失败）。按 08:20 触发约 08:26 交稿，无需提前触发。
