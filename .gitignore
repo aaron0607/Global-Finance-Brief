@@ -27,3 +27,4 @@ backups/
 
 # 服务器运行日志
 logs/
+.synced_commit

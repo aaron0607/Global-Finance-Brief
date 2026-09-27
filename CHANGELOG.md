@@ -1,5 +1,15 @@
 # 变更记录
 
+## 2026-09-27 · 服务器改走 GitHub REST API 读成稿与同步代码
+
+- **原因**：上线部署时实测腾讯云服务器连 `github.com:443` 超时（129 秒 `Connection timed out`），`git clone`/`git fetch` 不可用；`api.github.com` 可达（仓库私有，未鉴权返回 404）。原方案「服务器 git fetch briefs 分支」走不通。
+- **改动**：
+  - `server_publish.sh`：去掉本地 git 克隆，改用 `curl` 调 `GET /repos/{repo}/contents/briefs/DAY/*?ref=briefs`（`Accept: application/vnd.github.raw+json`）取 READY/FAILED/content/html；令牌 `BRIEF_GITHUB_TOKEN` 从 `.secrets.env` 读取。区分 200（取到）、404（尚无）、其它（网络/鉴权问题，08:50 后告警）；READY 已在但文件下载失败时下一轮重试，08:50 后告警；未配置令牌立即告警一次。发布窗口、只建一次草稿、同类告警只发一次等逻辑不变。
+  - 新增 `server_sync.py`：服务器经 API 取 `main` 最新提交的文件树，逐个下载跟踪文件，只覆盖内容有变化的文件（保留 100755 可执行位），覆盖前备份到 `backups/sync_<时间>/`，运行数据不动；`--dry-run` 只列变化；记录 `.synced_commit`（已加入 .gitignore）。
+  - `docs/cloud-routine.md` 与 AGENTS.md 同步改为令牌 + API 的部署步骤。
+- **安全**：令牌用 GitHub fine-grained token，只授权本仓库 `Contents: Read-only`，存服务器 `.secrets.env`（chmod 600），写入命令用 `read -s` 不回显、不进 shell 历史与对话。
+- **验证**：本地假 GitHub API（校验 Bearer 令牌、contents/trees/commits 三类接口）端到端：同步只替换 2 个变化文件、运行数据不动、有备份、重复运行 0 变化、错误令牌给出 401 说明；发布轮询 6 种场景（无成稿 08:50 告警一次、云端 FAILED 告警一次、READY 只发布一次、READY 但 html 缺失先重试后告警、无令牌告警一次、API 不通 08:50 告警一次）全部符合预期。
+
 ## 2026-09-27 · 服务器发布轮询窗口收窄到 08:00–09:00，08:50 未收到成稿即告警
 
 - **原因**：用户要求腾讯云只在北京时间 08:00–09:00 每 5 分钟拉取一次，拿到成稿发布后即停止；08:50 仍未收到云端成稿就飞书告警（原为 08:00–10:55 轮询、10:30 告警）。
