@@ -8,6 +8,7 @@ from pathlib import Path
 from unittest import mock
 
 import fetch_news
+import make_news_pool
 import write_brief
 
 BJT = write_brief.BRIEF_TZ
@@ -155,6 +156,27 @@ class NewsPoolTierTests(unittest.TestCase):
     def test_unknown_source_is_lowest_tier(self):
         self.assertEqual(write_brief.source_tier("something-new"), 3)
         self.assertEqual(write_brief.source_tier("reuters"), 1)
+
+
+class MakeNewsPoolTests(unittest.TestCase):
+    def test_pool_file_uses_snapshot_window_and_tiers(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            (base / "market_snapshot.json").write_text(json.dumps({"news_window": {
+                "start": "2026-09-26T08:00:00+08:00", "end": "2026-09-27T08:00:00+08:00"}}))
+            (base / "news_feed.json").write_text(json.dumps({"items": [
+                {"source_id": "cls", "source_name": "财联社", "title": "A股", "published_at": "2026-09-27T07:00:00+08:00"},
+                {"source_id": "reuters", "source_name": "Reuters", "title": "Fed", "published_at": "2026-09-26T09:00:00+08:00"},
+                {"source_id": "cnbc", "source_name": "CNBC", "title": "old", "published_at": "2026-09-26T07:59:00+08:00"},
+            ]}))
+            with mock.patch.object(make_news_pool, "BASE", base), \
+                    mock.patch.object(make_news_pool, "OUT", base / "news_pool.json"), \
+                    mock.patch.object(write_brief, "BASE", base), mock.patch("builtins.print"):
+                self.assertEqual(make_news_pool.main(), 0)
+            pool = json.loads((base / "news_pool.json").read_text())
+        self.assertEqual([it["title"] for it in pool["items"]], ["Fed", "A股"])
+        self.assertEqual([it["id"] for it in pool["items"]], [1, 2])
+        self.assertEqual(pool["window_start"], "2026-09-26T08:00:00+08:00")
 
 
 if __name__ == "__main__":

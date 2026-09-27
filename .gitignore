@@ -13,6 +13,7 @@ __pycache__/
 # 每日抓取/生成的运行数据（可重新生成，不作为源码版本管理）
 market_snapshot.json
 news_feed.json
+news_pool.json
 calendar_feed.json
 views_feed.json
 views_feed.txt

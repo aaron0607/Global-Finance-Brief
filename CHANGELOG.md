@@ -1,5 +1,15 @@
 # 变更记录
 
+## 2026-09-27 · 云端写稿提速与口径收紧：新闻池文件、去掉原文抓取、美联储情景随事实
+
+- **计时实测（Opus 5.5，云端 Routine）**：首条命令到终检通过约 4 分 51 秒——采集 33 秒（venv/pip 6 秒）、读数据与筛选 40 秒、5 组搜索 + 11 篇原文抓取 41 秒（10 篇被 CNBC/NPR/Schwab/富途拦截或无正文）、首稿 1 分 27 秒、构建 3 次（第 1 次因一条早于 24 小时窗口 50 分钟的来源失败，第 2 次因 5,812 字低于下限失败）。按 08:20 触发约 08:26 交稿，无需提前触发。
+- **用户裁决**：① 美联储路径按最新事实设情景，不再固定"不降息/降1次/加1次"；② 正文事实严格只用新闻池，WebSearch 只核验、不引入池外事实（本次试跑稿中伊朗方案条款来自搜索，属违规示例）。
+- **改动**：
+  - 新增 `make_news_pool.py`：用 `market_snapshot.news_window` 与 `write_brief.build_news_pool` 生成 `news_pool.json`（24h 窗口内、去重、按来源分级、带序号），`cloud_collect.sh` 采集成功后自动生成，失败即终止；加入 .gitignore。此前云端 Claude 直接读 `news_feed.json`，海外一手优先排序与窗口过滤只在 DeepSeek 通道生效，现两条通道同一口径，并消除"用了窗口外来源导致构建失败"。
+  - AGENTS.md：新闻来源红线改为新闻池（云端 `news_pool.json`），WebSearch 不得引入池外事实；取消批量 WebFetch 原文；美联储情景随事实；新增每条 bullet 约 330–380 可见字的首稿篇幅指引。`write_brief.py` 提示词的美联储情景同步修改。
+  - Routine 提示词第 4 步与 `docs/cloud-routine.md` 同步。
+- **预期**：省去原文抓取约 30 秒与 1–2 次失败构建，单次约 3–4 分钟；内容上正文事实全部可溯源到新闻池。
+
 ## 2026-09-27 · 服务器改走 GitHub REST API 读成稿与同步代码
 
 - **原因**：上线部署时实测腾讯云服务器连 `github.com:443` 超时（129 秒 `Connection timed out`），`git clone`/`git fetch` 不可用；`api.github.com` 可达（仓库私有，未鉴权返回 404）。原方案「服务器 git fetch briefs 分支」走不通。

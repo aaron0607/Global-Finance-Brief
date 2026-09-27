@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # 云端（Claude Code cloud 定时会话）Phase 1 采集：建 venv、并行跑四个采集脚本、关键路径重试。
 #
+# 采集成功后生成 news_pool.json（make_news_pool.py：24h 窗口内、按来源分级），正文事实只能来自它。
 # 与 run_brief.sh Phase 1 口径一致：行情 / 新闻 / 财经日历为关键路径（行情、日历失败重试一次），
 # fetch_views 失败只告警。退出码：0=可继续写稿；1=关键采集失败，必须终止并交接 FAILED。
 #
@@ -51,4 +52,9 @@ if [ -n "$FAILED" ]; then
   log "✗ 关键采集失败：$FAILED"
   exit 1
 fi
-log "✓ 采集完成，可以写稿（日志 $LOG）"
+if ! POOL_MSG="$("$VENV_PY" make_news_pool.py 2>&1)"; then
+  log "✗ 新闻池生成失败：$POOL_MSG"
+  exit 1
+fi
+log "$POOL_MSG"
+log "✓ 采集完成，可以写稿：正文新闻事实只能来自 news_pool.json（日志 $LOG）"
