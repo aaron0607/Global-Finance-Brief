@@ -1,5 +1,11 @@
 # 变更记录
 
+## 2026-09-28 · Bloomberg/CNBC RSS 请求失败时重试一次
+
+- **原因**：修复 CDATA 摘要后本机重跑 `fetch_news.py`，第一次 Bloomberg 整源 0 条（单独请求与第二次重跑均正常，属偶发请求失败）。`fetch_rss()` 失败只打 warn 不重试，一次抖动就会让一级来源整源缺席当期新闻池。
+- **改动**：`fetch_rss()` 在请求失败或响应解析出 0 条（如返回拦截页）时，间隔 `RSS_RETRY_DELAY`（2 秒）重试一次，并打印重试 warn；两次都失败仍返回空列表，行为与原先一致。`test_news_sources.py` 新增 `RssRetryTests`（首次成功不重试、失败后重试成功、0 条时重试、两次失败放弃）。
+- **影响**：只影响 Bloomberg/CNBC 两个 RSS 源；最坏情况每源多等约 2 秒 + 一次请求超时（15 秒），正常情况无额外耗时。
+
 ## 2026-09-28 · 修复 Bloomberg/CNBC RSS 摘要全部丢失（CDATA 未解包）
 
 - **原因**：两家 RSS 的 `<description>` 都包在 `<![CDATA[...]]>` 里，`_strip_html()` 的 `<[^>]+>` 把整段 CDATA（从 `<` 到 `]]>` 的 `>`）当成一个标签替换成空格，导致 `news_feed.json` 中所有 Bloomberg/CNBC 条目 `summary == " "`，`news_pool.json` 只剩标题。
