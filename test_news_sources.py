@@ -83,6 +83,23 @@ class HtmlEntityTests(unittest.TestCase):
         self.assertEqual(items[0]["title"], "Nor'easter & Boeing's glitch")
 
 
+class RssCdataTests(unittest.TestCase):
+    def test_cdata_title_and_description_survive(self):
+        items = fetch_news._parse_rss(
+            "<item><title><![CDATA[Oil jumps & stocks slip]]></title>"
+            "<description><![CDATA[Oil prices jumped on Monday\n  after supply cuts.]]></description>"
+            "<pubDate>Sat, 26 Sep 2026 22:23:00 GMT</pubDate></item>")
+        self.assertEqual(items[0]["title"], "Oil jumps & stocks slip")
+        self.assertEqual(items[0]["summary"], "Oil prices jumped on Monday after supply cuts.")
+
+    def test_cdata_description_with_inline_html(self):
+        items = fetch_news._parse_rss(
+            "<item><title>Nvidia rallies</title>"
+            "<description><![CDATA[<p>Nvidia rose <b>4%</b> after Micron&#x27;s results.</p>]]></description>"
+            "<pubDate>Sat, 26 Sep 2026 22:23:00 GMT</pubDate></item>")
+        self.assertEqual(items[0]["summary"], "Nvidia rose 4% after Micron's results.")
+
+
 class ReutersBingTests(unittest.TestCase):
     @staticmethod
     def item(url, pub, source="Reuters", title="T"):
