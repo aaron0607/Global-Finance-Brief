@@ -21,6 +21,7 @@ import json
 import os
 import re
 import sys
+import time
 from pathlib import Path
 from typing import Optional
 from zoneinfo import ZoneInfo
@@ -51,6 +52,8 @@ RSS_FEEDS = {
         "category": "finance",
     },
 }
+
+RSS_RETRY_DELAY = 2  # 秒
 
 # ── Reuters ────────────────────────────────────────────
 # Reuters 无公开 RSS、文章页反爬，但官方 Google News sitemap 可直连：每页 50 条、按发布时间倒序，
@@ -206,10 +209,16 @@ def fetch_rss(feed_id: str) -> list[dict]:
     feed = RSS_FEEDS.get(feed_id)
     if not feed:
         return []
-    xml_text = _fetch_text(feed["url"])
-    if not xml_text:
-        return []
-    items = _parse_rss(xml_text)
+    # 偶发请求失败会让一级来源整源缺席，失败或解析出 0 条时隔 2 秒重试一次。
+    items: list[dict] = []
+    for attempt in range(2):
+        if attempt:
+            print(f"[warn] rss/{feed_id} 首次获取失败，重试一次", file=sys.stderr)
+            time.sleep(RSS_RETRY_DELAY)
+        xml_text = _fetch_text(feed["url"])
+        items = _parse_rss(xml_text) if xml_text else []
+        if items:
+            break
     return [
         {
             "source": "rss",

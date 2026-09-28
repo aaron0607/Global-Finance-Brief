@@ -100,6 +100,35 @@ class RssCdataTests(unittest.TestCase):
         self.assertEqual(items[0]["summary"], "Nvidia rose 4% after Micron's results.")
 
 
+class RssRetryTests(unittest.TestCase):
+    FEED = ("<rss><channel><item><title>Oil jumps</title>"
+            "<description><![CDATA[Oil prices jumped.]]></description>"
+            "<pubDate>Sat, 26 Sep 2026 22:23:00 GMT</pubDate></item></channel></rss>")
+
+    def _run(self, responses):
+        with mock.patch.object(fetch_news, "_fetch_text", side_effect=responses) as fetch, \
+                mock.patch.object(fetch_news.time, "sleep") as sleep:
+            items = fetch_news.fetch_rss("bloomberg")
+        return items, fetch.call_count, sleep.call_count
+
+    def test_first_attempt_ok_no_retry(self):
+        items, calls, sleeps = self._run([self.FEED])
+        self.assertEqual((len(items), calls, sleeps), (1, 1, 0))
+
+    def test_retries_once_after_failure(self):
+        items, calls, sleeps = self._run([None, self.FEED])
+        self.assertEqual((len(items), calls, sleeps), (1, 2, 1))
+        self.assertEqual(items[0]["summary"], "Oil prices jumped.")
+
+    def test_retries_when_response_has_no_items(self):
+        items, calls, _ = self._run(["<html>blocked</html>", self.FEED])
+        self.assertEqual((len(items), calls), (1, 2))
+
+    def test_gives_up_after_second_failure(self):
+        items, calls, _ = self._run([None, None])
+        self.assertEqual((items, calls), ([], 2))
+
+
 class ReutersBingTests(unittest.TestCase):
     @staticmethod
     def item(url, pub, source="Reuters", title="T"):
