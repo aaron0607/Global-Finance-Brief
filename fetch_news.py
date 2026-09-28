@@ -140,8 +140,7 @@ def _parse_rss(xml_text: str) -> list[dict]:
 
 def _clean_title(raw: str) -> str:
     """去除 CDATA 包装和 HTML 实体。"""
-    t = re.sub(r"<!\[CDATA\[(.*?)\]\]>", r"\1", raw)
-    return _strip_html(t)
+    return _strip_html(raw)
 
 
 def _tag_text(block: str, tag: str) -> str:
@@ -150,7 +149,10 @@ def _tag_text(block: str, tag: str) -> str:
 
 
 def _strip_html(raw: str) -> str:
-    return html.unescape(re.sub(r"<[^>]+>", " ", raw))
+    # 先拆 CDATA：否则 `<![CDATA[ ... ]]>` 整体会被当成一个标签替换成空格，Bloomberg/CNBC 摘要全丢。
+    text = re.sub(r"<!\[CDATA\[(.*?)\]\]>", r"\1", raw, flags=re.DOTALL)
+    text = html.unescape(re.sub(r"<[^>]+>", " ", text))
+    return re.sub(r"\s+", " ", text).strip()
 
 
 def _try_parse_rss_date(raw: str) -> Optional[str]:

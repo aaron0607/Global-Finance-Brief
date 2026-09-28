@@ -1,5 +1,11 @@
 # 变更记录
 
+## 2026-09-28 · 修复 Bloomberg/CNBC RSS 摘要全部丢失（CDATA 未解包）
+
+- **原因**：两家 RSS 的 `<description>` 都包在 `<![CDATA[...]]>` 里，`_strip_html()` 的 `<[^>]+>` 把整段 CDATA（从 `<` 到 `]]>` 的 `>`）当成一个标签替换成空格，导致 `news_feed.json` 中所有 Bloomberg/CNBC 条目 `summary == " "`，`news_pool.json` 只剩标题。
+- **改动**：`fetch_news._strip_html()` 先解包 CDATA，再去 HTML 标签、解码实体、折叠空白并去首尾空格；`_clean_title()` 改为直接复用它。`test_news_sources.py` 新增 CDATA 摘要与含 `<p>/<b>` 内联 HTML 的用例。
+- **影响**：实测 Bloomberg 20/20、CNBC 30/30 条目恢复 1–2 句摘要，写稿可用的一级来源事实更充分；其他来源的标题/摘要额外做了空白折叠，无其他行为变化。Reuters sitemap、富途、金十文章列表、alphaear 热榜本身不带摘要，本次不涉及。
+
 ## 2026-09-27 · 成稿人名简称：「习近平」一律写作「习」
 
 - **原因**：用户规定，今后成稿中涉及「习近平」三个字的全部缩写为「习」。
