@@ -1,0 +1,406 @@
+{
+  "date_yyyymmdd": "20260929",
+  "date_cn": "2026年9月29日（周二）",
+  "as_of": "2026-09-29T08:20:45+08:00",
+  "main_title": "美债收益率创2007年来新高·费半跌1.6%<br>OpenAI搁置新模型·布油升至98美元",
+  "alert_time": "08:20",
+  "alert": "**过去24小时核心变化**：美伊会谈陷入僵局推升油价，布伦特原油期货盘中[[red:涨超5%]]，10年期美债收益率[[green:再创2007年来新高]]，美股三大指数全线收跌，费城半导体[[green:下跌1.61%]]领跌，黄金盘中[[green:跌超4%]]后在4118美元附近企稳。科技产业端信息密集：OpenAI因内部安全测试[[c:搁置新模型发布]]，Anthropic招股书披露2025财年营收[[red:同比增长1088%]]并计划未来一年投入5180亿美元算力与基础设施。当天交易结构是利率逆风压估值、产业资本开支信号仍在加码。",
+  "qdii_date_label": "估算基于2026年9月28日（周一）最近交易日收盘",
+  "logic_chain": {
+    "paths": [
+      {
+        "name": "路径A（科技主线·算力开支再加码）",
+        "color": "#534AB7",
+        "body": "Anthropic计划未来一年投入5180亿美元算力<br>AMD、英伟达、三星同日推进AI并购与投资",
+        "sub": "验证：云与算力订单兑现、存储与封装设备出货"
+      },
+      {
+        "name": "路径B（宏观逆风·长端利率新高）",
+        "color": "#A32D2D",
+        "body": "油价抬升通胀预期、加息押注升温<br>10年期美债收益率创2007年来新高压制估值",
+        "sub": "验证：8月核心PCE与9月非农是否超预期"
+      },
+      {
+        "name": "路径C（独立变量·美伊僵局与金油）",
+        "color": "#0F6E56",
+        "body": "美伊各自接触调停方但无实质进展<br>油价走高经通胀与利率链条压制黄金",
+        "sub": "验证：沙特管道运力恢复、谈判是否重启"
+      }
+    ],
+    "priority": "今日验证顺序：①美伊与调停方接触进展 ②美债长端收益率能否企稳 ③周三8月核心PCE ④周五9月非农"
+  },
+  "calendar": [
+    {
+      "date": "9月30日 周三",
+      "date_iso": "2026-09-30",
+      "event": "20:15 美国9月ADP就业人数",
+      "stars": 3
+    },
+    {
+      "date": "9月30日 周三",
+      "date_iso": "2026-09-30",
+      "event": "20:30 美国8月核心PCE物价指数年率、6月年化实际GDP",
+      "stars": 3
+    },
+    {
+      "date": "9月30日 周三",
+      "date_iso": "2026-09-30",
+      "event": "22:30 美国至9月25日当周EIA原油库存",
+      "stars": 3
+    },
+    {
+      "date": "10月1日 周四",
+      "date_iso": "2026-10-01",
+      "event": "20:30 美国至9月26日当周初请失业金人数",
+      "stars": 3
+    },
+    {
+      "date": "10月2日 周五",
+      "date_iso": "2026-10-02",
+      "event": "20:30 美国9月季调后非农就业人口、失业率",
+      "stars": 3
+    }
+  ],
+  "sources": [
+    {
+      "source": "CNBC Top News",
+      "title": "Stock futures are little changed after higher yields lead to losing session: Live updates",
+      "published_at": "2026-09-29T08:17:15+08:00",
+      "used_in": [
+        "focus",
+        "stock_rotation"
+      ]
+    },
+    {
+      "source": "Bloomberg Markets",
+      "title": "Gold Trades Near Seven-Week Low as Rate-Hike Pressure Mounts",
+      "published_at": "2026-09-29T08:02:41+08:00",
+      "used_in": [
+        "commodity",
+        "macro"
+      ]
+    },
+    {
+      "source": "CNBC Top News",
+      "title": "Samsung to inject $1 billion into Nvidia- and KKR-backed AI infrastructure firm",
+      "published_at": "2026-09-29T08:00:10+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "CNBC Top News",
+      "title": "Anthropic's IPO prospectus shows sweeping AI vision, surging costs: Reuters",
+      "published_at": "2026-09-29T07:55:07+08:00",
+      "used_in": [
+        "ai_tech",
+        "focus"
+      ]
+    },
+    {
+      "source": "CNBC Top News",
+      "title": "OpenAI abandons plan to release upcoming model as safety concerns escalate",
+      "published_at": "2026-09-29T07:19:46+08:00",
+      "used_in": [
+        "focus",
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "AMD to buy Fei-Fei Li's World Labs in $8.2 billion bet on 'physical AI'",
+      "published_at": "2026-09-29T07:18:39.509000+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "Stocks fall as higher oil prices, Treasury yields weigh",
+      "published_at": "2026-09-29T07:16:33.729000+08:00",
+      "used_in": [
+        "focus",
+        "stock_rotation"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "US, Iran separately talk with mediators in latest bid to end war",
+      "published_at": "2026-09-29T06:42:23.734000+08:00",
+      "used_in": [
+        "iran"
+      ]
+    },
+    {
+      "source": "CNBC Top News",
+      "title": "AMD briefly joined the $1 trillion club. Cramer says its monster run isn’t over",
+      "published_at": "2026-09-29T06:27:10+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "Bloomberg Markets",
+      "title": "Asian Bonds Drop After Treasuries Selloff Deepens: Markets Wrap",
+      "published_at": "2026-09-29T06:11:04+08:00",
+      "used_in": [
+        "macro",
+        "focus"
+      ]
+    },
+    {
+      "source": "Bloomberg Markets",
+      "title": "Latest Oil Market News and Analysis for Sept. 29",
+      "published_at": "2026-09-29T06:02:33+08:00",
+      "used_in": [
+        "iran",
+        "commodity"
+      ]
+    },
+    {
+      "source": "CNBC Top News",
+      "title": "Khanna to introduce AI safety bill with ban on 'recursive' technology until safeguards exist",
+      "published_at": "2026-09-29T05:43:40+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "Bloomberg Markets",
+      "title": "Summit Therapeutics Jumps on $2 Billion AstraZeneca Deal",
+      "published_at": "2026-09-29T05:42:10+08:00",
+      "used_in": [
+        "stock_rotation"
+      ]
+    },
+    {
+      "source": "CNBC Top News",
+      "title": "Trump announces plan for $15 billion steel plant, would be largest in U.S. history",
+      "published_at": "2026-09-29T05:20:00+08:00",
+      "used_in": [
+        "stock_rotation"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "TSX hits nearly two-month low as gold slides, bond yields climb",
+      "published_at": "2026-09-29T04:53:45.281000+08:00",
+      "used_in": [
+        "commodity",
+        "stock_rotation"
+      ]
+    },
+    {
+      "source": "CNBC Top News",
+      "title": "Michael Burry believes the AI bubble 'may burst' sooner than he first believed",
+      "published_at": "2026-09-29T04:43:14+08:00",
+      "used_in": [
+        "ai_tech",
+        "stock_rotation"
+      ]
+    },
+    {
+      "source": "CNBC Top News",
+      "title": "OpenAI sparked Hugging Face bids with early investment offer ahead of Nvidia's $13 billion deal",
+      "published_at": "2026-09-29T04:36:55+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "CNBC Top News",
+      "title": "A relief rally could be coming soon for these stocks getting hurt by higher rates, says Katie Stockton",
+      "published_at": "2026-09-29T04:26:41+08:00",
+      "used_in": [
+        "stock_rotation"
+      ]
+    },
+    {
+      "source": "金十数据",
+      "title": "美联储库克再敲警钟：AI短期难平抑物价，反成通胀新推手",
+      "published_at": "2026-09-29T08:15:08+08:00",
+      "used_in": [
+        "macro"
+      ]
+    },
+    {
+      "source": "富途牛牛",
+      "title": "高盛表示：美光与英伟达，一只AI股有望跑赢大盘，另一只则更难判断",
+      "published_at": "2026-09-29T08:13:11+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "富途牛牛",
+      "title": "一起呼吁“AI减速”？OpenAI取消最新模型发布，Anthropic却“两连发”！",
+      "published_at": "2026-09-29T08:13:09+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "富途牛牛",
+      "title": "沙特修复管道，红海原油出口“全量运行”，其出口量将决定油价走势",
+      "published_at": "2026-09-29T08:07:16+08:00",
+      "used_in": [
+        "iran"
+      ]
+    },
+    {
+      "source": "富途牛牛",
+      "title": "Megaport表示，其业务部门获得近9.79亿澳元的新一代人工智能基础设施合同；上调2027财年营收指引",
+      "published_at": "2026-09-29T08:05:05+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "富途牛牛",
+      "title": "昨夜！中概股指数大涨，黄金、白银跳水",
+      "published_at": "2026-09-29T07:59:48+08:00",
+      "used_in": [
+        "stock_rotation",
+        "commodity"
+      ]
+    },
+    {
+      "source": "富途牛牛",
+      "title": "全球长债市场上演抛售潮 黄金、AI资产同步承压",
+      "published_at": "2026-09-29T07:38:56+08:00",
+      "used_in": [
+        "focus",
+        "macro"
+      ]
+    },
+    {
+      "source": "金十数据快讯",
+      "title": "【金十数据整理：每日科技要闻速递（9月29日）】 人工智能： 1. OpenAI因安全问题推迟发布GPT-6.1 Astra。 2. Anthropic IPO招股书曝光，2025财年营收达45.9亿美元、提出变革性人工智能技术的发展计划。",
+      "published_at": "2026-09-29T07:37:31+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "华尔街见闻·美股直播",
+      "title": "美伊会谈僵局打压美股、推升原油，原油盘中涨超5%，报道称特朗普放松制裁消息后一度“闪跌”；10年期美债收益率再创2007年来新高；金银重挫，黄金盘中跌超4%。\n\n报道：伊朗预计美国中期选举后双方冲突升级的可能性很高。\n\n特朗普否认曾向伊朗提",
+      "published_at": "2026-09-29T07:30:38+08:00",
+      "used_in": [
+        "focus",
+        "iran",
+        "macro",
+        "commodity"
+      ]
+    },
+    {
+      "source": "富途牛牛",
+      "title": "韩美半导体，发货首台 FC Bonder 75，进军 AI 芯片封装 ！",
+      "published_at": "2026-09-29T07:30:00+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "华尔街见闻·美股直播",
+      "title": "根据招股说明书，Anthropic在2025年报告净亏损420亿美元，并计划在未来一年内斥资5180亿美元用于云服务、计算和基础设施支出。文件显示，Anthropic 2025年营收增长了12倍，达到近46亿美元，但运营层面亏损超过80亿美",
+      "published_at": "2026-09-29T07:22:37+08:00",
+      "used_in": [
+        "focus",
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "Pentagon awards RTX's Raytheon $20.7 billion contract for AMRAAM missiles amid stockpile concerns",
+      "published_at": "2026-09-29T06:04:00.871000+08:00",
+      "used_in": [
+        "stock_rotation"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "Tether USDT aids Iran funding, Senate report says",
+      "published_at": "2026-09-29T08:12:58.171000+08:00",
+      "used_in": [
+        "iran"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "No strikes confirmed after explosion-like sounds heard near Iran's Qeshm",
+      "published_at": "2026-09-29T05:01:08.483000+08:00",
+      "used_in": [
+        "iran"
+      ]
+    },
+    {
+      "source": "金十数据快讯",
+      "title": "欢迎进入链接网页右侧下载本周财经数据与事件精美周历壁纸：今日澳洲联储公布利率决议，特朗普、众议院议长约翰逊以及多家科技公司CEO就人工智能举行会议。",
+      "published_at": "2026-09-29T07:55:26+08:00",
+      "used_in": [
+        "macro"
+      ]
+    }
+  ],
+  "sections": [
+    {
+      "id": "focus",
+      "title": "头号焦点 | 长端利率新高压住估值，AI资本开支却在加速",
+      "bullets": [
+        "[[c:油价与利率同步上行]]：美伊会谈僵局成为周一定价起点，原油盘中[[red:涨超5%]]。能源成本抬升直接点燃通胀担忧和继续加息押注，10年期美债收益率[[green:再创2007年来新高]]，最新报5.24%。股市随之承压，标普500收跌[[green:0.77%]]至7683.69点，纳指收跌0.92%，道指收跌0.67%，恐慌指数上升8.07%至16.07。课代表框架：这是一轮由利率驱动、而非盈利驱动的回调，指数跌幅温和、波动率仍处低位，说明市场在下调估值而不是在定价衰退。",
+        "[[c:全球长债同步抛售]]：美债卖压没有停留在美国本土，亚洲债券周二早盘跟随美债下跌，全球长债市场呈现抛售潮，黄金与AI资产同步承压。这一组合值得重视，因为黄金和科技股通常在避险情绪中表现分化，而这一次两者同时回落，指向的是共同的贴现率冲击：长端收益率上行同时抬高了持有黄金的机会成本和成长股的折现率。费城半导体指数下跌[[green:1.61%]]，跌幅明显大于大盘，高估值、长久期的半导体资产对利率最敏感。美股期货周二早盘[[c:基本持平]]，卖压尚未明显扩散。",
+        "[[c:产业端信号与盘面背离]]：同一时间窗口里，AI产业的资本开支信号不降反升，Anthropic招股书显示其计划在未来一年投入[[red:5180亿美元]]用于云服务、算力与基础设施，AMD以82亿美元收购World Labs，三星集团向KKR支持的AI基础设施公司Helix注资10亿美元。课代表框架：盘面跌的是估值，产业链上游看到的是订单与投资持续扩张，科技回调更接近交易层面的利率冲击，而非AI基本面逆转。失效条件同样清楚：若长端收益率继续上冲、[[green:信用利差走阔]]，高负债扩张的算力投资会被重新定价，届时需要降低对上游弹性的预期。"
+      ],
+      "note": "油价推升加息押注，长端利率创2007年来新高压制估值；AI资本开支信号仍在加码，回调属交易层面，关键看利率能否企稳。"
+    },
+    {
+      "id": "ai_tech",
+      "title": "AI·芯片·科技 | 安全争议升温，算力投入仍在上修",
+      "bullets": [
+        "[[c:OpenAI搁置新模型]]：OpenAI在内部安全测试后搁置了即将发布的新模型，即GPT-6.1 Astra，OpenAI与Anthropic的负责人近期都表示顶级AI实验室应放慢模型开发节奏。监管端同步收紧，众议员Khanna计划提出AI安全法案，在安全措施到位前禁止“递归”技术。与此同时，Anthropic仍发布了[[red:Sonnet 5.5模型]]。课代表框架：放缓的是最前沿一代模型的发布节奏，新一代模型往往能力更强、单位消耗更低，推理需求与算力采购的方向未变；需要跟踪的是立法是否从讨论走向[[green:硬性限制]]。",
+        "[[c:Anthropic招股书]]：招股说明书显示，Anthropic 2025财年营收为45.9亿美元，[[red:同比增长1088%]]，但全年净亏损420亿美元，剔除融资相关负债减值后运营层面亏损仍超过80亿美元。更关键的是支出结构：去年计算与基础设施支出达到[[c:73.3亿美元]]，较2024年增长三倍，占126.5亿美元总运营支出的一半以上，未来一年还计划投入5180亿美元用于云服务、算力和基础设施。招股书同时披露近四分之一营收来自两家客户。课代表框架：头部模型公司的收入高增与巨额投入同时出现，最直接的受益者是上游算力、存储与电力环节，而[[green:客户集中度与亏损规模]]是估值的主要约束。",
+        "[[c:芯片巨头加速并购]]：AMD宣布以[[c:82亿美元]]收购李飞飞创办的World Labs押注“物理AI”，李飞飞将出任AMD首席科学家；AMD市值盘中一度跻身[[red:万亿美元俱乐部]]，Jim Cramer认为智能体AI的兴起将显著拉动AMD高端CPU需求。英伟达则已同意以约130亿美元收购开源平台Hugging Face。机构观点方面，[[c:高盛]]就美光与英伟达给出分化判断，认为其中一只有望跑赢大盘、另一只更难判断。课代表框架：芯片公司从卖硬件延伸到掌握模型与开发者生态，是在锁定下一轮算力需求的入口，但并购溢价也放大了利率上行期的估值压力。",
+        "[[c:上游卖铲子环节]]：基础设施投资继续外溢到更多国家和环节，三星电子及五家关联公司合计向英伟达与KKR支持的Helix Digital Infrastructure投资[[red:10亿美元]]；澳大利亚Megaport旗下业务获得近9.79亿澳元新一代AI基础设施合同，并上调2027财年营收指引；韩美半导体首台FC Bonder 75发货进军AI芯片封装。反方声音同样存在，Michael Burry认为AI泡沫可能比他此前判断的更早破裂，并将主要科技空头换成6月到期的看跌期权。课代表框架：订单、合同与封装设备出货是可验证的硬数据，比情绪指标更能说明上游景气；风险在于[[green:长端利率抬升融资成本]]，拖慢资本开支节奏。"
+      ],
+      "note": "前沿模型发布放缓与立法讨论升温，但招股书、并购与订单显示算力投入仍在上修；主要风险是利率抬升融资成本。"
+    },
+    {
+      "id": "stock_rotation",
+      "title": "资金轮动 | 利率敏感板块承压，防御与独立催化分化",
+      "bullets": [
+        "[[c:风格与资金去向]]：周一美股是一次利率驱动的普跌，纳指跌0.92%、费城半导体跌[[green:1.61%]]，高估值科技领跌，道指跌幅仅0.67%，相对抗跌。受高利率压制最深的公用事业板块已处于深度超卖，Fairlead Strategies的Katie Stockton认为未来几周出现短线[[red:修复反弹]]的概率上升。课代表框架：这不是高切低，而是利率上行下的整体降估值，资金更多在观望，恐慌指数仅16.07，说明仓位调整有序，尚无系统性抛售。",
+        "[[c:独立催化]]：科技以外有几条逆势主线。中概股指数[[red:大涨]]，与美股大盘走势背离；Summit Therapeutics因阿斯利康20亿美元战略股权投资而大涨；五角大楼授予雷神206亿美元AMRAAM导弹合同，国防订单在库存担忧下加速落地；特朗普宣布与Mesabi Metallics合作在艾奥瓦州规划150亿美元钢厂，称其为美国历史上最大。课代表框架：这些催化来自并购、订单和政策，属于公司层面的独立逻辑，能在利率逆风中提供结构性机会，但难以扭转指数方向，[[c:持续性取决于订单落地]]。"
+      ],
+      "note": "资金从高估值科技撤出但未明显流向单一板块，中概、生物医药与国防靠独立催化逆势走强，整体属利率驱动的降估值。"
+    },
+    {
+      "id": "iran",
+      "title": "中东地缘 | 美伊各找调停方，口头拉锯多于实质进展",
+      "bullets": [
+        "[[c:外交层面仍在拉锯]]：美国与伊朗分别与调停方接触，试图结束战争，但双方仍未恢复直接谈判，围绕霍尔木兹海峡的僵局延续。特朗普公开否认曾向伊朗提出放松制裁或解冻资金，油价在相关传闻带来的闪跌后迅速收复。伊朗方面预计美国中期选举后双方冲突升级的可能性很高。美国参议院一份报告还指出，Tether的USDT为伊朗融资提供了帮助。课代表框架：当前属于[[c:口头表态与试探]]，尚无已执行的协议或让步，中选前局势大概率延续打打谈谈的反复节奏。",
+        "[[c:供应端的现实验证]]：伊朗格什姆岛附近传出类似爆炸的声响，但目前没有确认发生打击。供给方面，两周前因遇袭而关闭的沙特关键输油管道已恢复出口，最新运力恢复约一半，沙特红海原油出口也在恢复。油价仍连续第二日上涨，因为美伊谈判缺乏进展与需求强劲的信号，压过了沙特管道[[red:恢复供应]]带来的缓解。课代表框架：实际供应在修复，但海峡风险溢价尚未消退，布伦特原油期货维持在[[c:98.70美元]]附近，说明市场定价的是不确定性本身。",
+        "[[c:传导链]]：地缘冲击对资产的影响路径是油价→通胀→利率。油价居高不下维持通胀预期，令美联储继续承受加息压力，长端收益率上行随后同时压制黄金与成长股估值，这正是周一金价与科技股同步下跌的原因。缓和条件是美伊恢复直接谈判或海峡通航出现实质改善，油价回落将直接减轻利率端压力；升级条件是出现[[green:确认的军事打击]]或供应中断再度扩大。课代表框架：地缘不是黄金的直接上行触发器，只有当它通过利率链条传导时才改变黄金定价。"
+      ],
+      "note": "美伊仅各自接触调停方，无实质进展；沙特管道修复缓解供给，但海峡风险溢价仍经油价与利率压制黄金和科技。"
+    },
+    {
+      "id": "macro",
+      "title": "宏观·利率 | 加息押注升温，核心PCE与非农成为定价关口",
+      "bullets": [
+        "[[c:利率定价]]：美伊僵局推高的能源成本重新点燃通胀担忧，市场加码押注美联储继续加息，10年期美债收益率[[green:创2007年来新高]]，最新报5.24%，美元指数小幅上行至101.26。全球长债同步遭抛售，亚洲债券周二跟随下跌。美联储理事库克再次警示，AI短期内难以平抑物价，反而可能成为[[c:通胀新推手]]。课代表框架：长端利率上行不仅压估值，也抬高科技巨头扩张算力所需的融资成本，这是本轮最值得跟踪的逆风。",
+        "[[c:美联储三种情景]]：基准情景是油价维持高位、数据不弱，美联储按市场定价延续加息节奏，长端收益率在高位震荡；偏好情景是8月核心PCE与9月非农[[red:温和降温]]，加息预期回落，收益率从高位回撤，科技与黄金同步喘息；偏坏情景是通胀与就业双双超预期叠加油价再冲高，市场上修加息幅度与次数，长端利率突破新高并引发信用利差走阔。中国国常会提出加大宏观政策[[c:逆周期调节]]力度。",
+        "[[c:前瞻窗口]]：本周数据密集，周三晚20:15公布美国9月ADP就业人数，20:30公布8月核心PCE物价指数年率与年化实际GDP，22:30公布EIA原油库存；周四公布初请失业金人数；周五20:30公布9月非农就业与失业率。今日特朗普、众议院议长约翰逊及多家科技公司CEO将就人工智能举行会议。课代表框架：[[c:核心PCE]]是验证当前加息定价的第一道关口，若通胀降温，利率压力缓解将先利好高久期科技；若超预期，黄金与科技仍会一起承压。"
+      ],
+      "note": "加息押注与油价共同推升长端利率，核心PCE与非农是证实或证伪当前定价的关键，通胀降温才是科技与黄金的共同解压阀。"
+    },
+    {
+      "id": "commodity",
+      "title": "大宗·外汇 | 油价走高推升利率，金价跌至七周低位附近",
+      "bullets": [
+        "**黄金**：金价周一盘中[[green:跌超4%]]，白银同步重挫，最新报4118.28美元，徘徊在七周低位附近。美伊围绕霍尔木兹海峡的僵局使能源成本居高不下，持续给美联储加息施压，这才是金价下跌的主因：长端收益率走高抬升了持有无息资产的机会成本。加拿大TSX指数也随金价下滑跌至近两个月低位。课代表框架：黄金由利率预期主导，地缘因素经油价与通胀传导后反而构成短期压力；中期配置逻辑未变，[[c:4100美元附近]]的回调提供了分批布局的观察区间，右侧信号需等待核心PCE降温与长端收益率回落。",
+        "**布伦特原油期货+美元指数**：布伦特原油期货[[red:连续第二日上涨]]，最新报98.70美元，涨0.89%，美伊谈判缺乏进展和需求强劲信号压过了沙特管道恢复供应的缓解作用；美元指数小幅上涨0.07%至101.26，加息押注升温提供支撑。两者共振形成双重压力：油价维持通胀预期，美元走强收紧全球金融条件，共同压制黄金和新兴市场资产。课代表框架：油价[[c:回落至90美元区间]]是利率与黄金解压的前提，这一条件的验证取决于海峡通航与沙特出口恢复进度。"
+      ],
+      "note": "油价连涨与美元走强共同推升利率预期，黄金跌至七周低位附近；金价拐点取决于核心PCE与长端收益率回落。"
+    }
+  ]
+}
