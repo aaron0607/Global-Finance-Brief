@@ -1,0 +1,534 @@
+{
+  "date_yyyymmdd": "20260930",
+  "date_cn": "2026年9月30日（周三）",
+  "as_of": "2026-09-30T08:20:43+08:00",
+  "main_title": "30年期美债触2002年高位·美股两连跌<br>威廉姆斯称加息不急·费半涨1.32%",
+  "alert_time": "08:20",
+  "alert": "**过去24小时核心变化**：30年期美债收益率触及2002年以来高位，美股三大指数两连跌，但纽约联储主席威廉姆斯称[[c:下一次加息没有紧迫性]]，10月加息定价从约70%回落；费城半导体指数[[red:逆势涨1.32%]]，美光财报前收涨1.05%。副线上，沙特绕开海峡的管道恢复输油、美国计划释放4000万桶战略储备，油价一周多来最大跌幅后企稳，黄金反弹后震荡。当天交易结构是利率高位下的AI上游再定价，今晚8月PCE是下一关口。",
+  "qdii_date_label": "估算基于2026年9月29日（周二）最近交易日收盘",
+  "logic_chain": {
+    "paths": [
+      {
+        "name": "路径A（科技主线·存储与智能体双验证）",
+        "color": "#534AB7",
+        "body": "费半涨1.32%、Meta涨3.24%<br>智能体推高推理算力需求",
+        "sub": "美光盘后财报指引"
+      },
+      {
+        "name": "路径B（宏观逆风·长端美债高位）",
+        "color": "#A32D2D",
+        "body": "30年期收益率触2002年高位<br>压制科技估值与黄金",
+        "sub": "今晚8月PCE与周五非农"
+      },
+      {
+        "name": "路径C（地缘与黄金·供给缓冲）",
+        "color": "#0F6E56",
+        "body": "沙特管道分流+战略储备释放<br>油价回落减轻通胀压力",
+        "sub": "美伊谈判是否出现可核实让步"
+      }
+    ],
+    "priority": "今日验证顺序：①20:30 美国8月核心PCE ②美光盘后财报 ③美伊斡旋进展 ④10年期美债收益率能否回落至5.2%下方"
+  },
+  "calendar": [
+    {
+      "date": "9月30日 周三",
+      "date_iso": "2026-09-30",
+      "event": "20:15 美国9月ADP就业人数",
+      "stars": 3
+    },
+    {
+      "date": "9月30日 周三",
+      "date_iso": "2026-09-30",
+      "event": "20:30 美国8月核心PCE物价指数年率、6月年化实际GDP",
+      "stars": 3
+    },
+    {
+      "date": "9月30日 周三",
+      "date_iso": "2026-09-30",
+      "event": "22:30 美国至9月25日当周EIA原油库存",
+      "stars": 3
+    },
+    {
+      "date": "10月1日 周四",
+      "date_iso": "2026-10-01",
+      "event": "20:30 美国至9月26日当周初请失业金人数",
+      "stars": 3
+    },
+    {
+      "date": "10月2日 周五",
+      "date_iso": "2026-10-02",
+      "event": "20:30 美国9月季调后非农就业人口、失业率",
+      "stars": 3
+    }
+  ],
+  "sources": [
+    {
+      "source": "CNBC Top News",
+      "title": "Hedge funds hold a record share of the $30 trillion Treasury market. What could go wrong?",
+      "published_at": "2026-09-30T08:19:09+08:00",
+      "used_in": [
+        "macro"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "Boeing wins US Navy's next-generation fighter contract, Pentagon says",
+      "published_at": "2026-09-30T08:17:44.201000+08:00",
+      "used_in": [
+        "stock_rotation"
+      ]
+    },
+    {
+      "source": "CNBC Top News",
+      "title": "Stock futures inch higher as traders weather latest rise in Treasury yields: Live updates",
+      "published_at": "2026-09-30T08:15:36+08:00",
+      "used_in": [
+        "focus",
+        "macro"
+      ]
+    },
+    {
+      "source": "Bloomberg Markets",
+      "title": "Commodity Boom Pushes Mongolian Stocks to World-Beating Quarter",
+      "published_at": "2026-09-30T08:04:43+08:00",
+      "used_in": [
+        "stock_rotation"
+      ]
+    },
+    {
+      "source": "Bloomberg Markets",
+      "title": "Korean Stocks Face Early End to $40 Billion Buyback Support",
+      "published_at": "2026-09-30T08:00:00+08:00",
+      "used_in": [
+        "focus",
+        "stock_rotation"
+      ]
+    },
+    {
+      "source": "Bloomberg Markets",
+      "title": "Gold Steady as Traders Weigh Lower Oil Against Higher Yields",
+      "published_at": "2026-09-30T07:58:58+08:00",
+      "used_in": [
+        "commodity"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "China's AI agents can lie and scheme - just like their US rivals",
+      "published_at": "2026-09-30T07:46:29.040000+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "AI sector signed 'accord' on technology standards, US House speaker says",
+      "published_at": "2026-09-30T07:25:38.499000+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "OpenAI takes on Meta with dots agent in autonomous AI push",
+      "published_at": "2026-09-30T07:03:58.555000+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "Equities end slightly lower as bond yields hold near multi-decade highs",
+      "published_at": "2026-09-30T06:55:50.317000+08:00",
+      "used_in": [
+        "focus"
+      ]
+    },
+    {
+      "source": "CNBC Top News",
+      "title": "Trump tries to rename AI 'super intelligence' as polls show him sinking on key issue",
+      "published_at": "2026-09-30T06:42:35+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "Trump releases AI accord with tech executives",
+      "published_at": "2026-09-30T06:34:27.625000+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "Qatari mediators press peace deal between US and Iran",
+      "published_at": "2026-09-30T06:19:16.529000+08:00",
+      "used_in": [
+        "iran"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "Lilly's experimental drug cuts weight by 21% in diabetes trial",
+      "published_at": "2026-09-30T06:15:06.688000+08:00",
+      "used_in": [
+        "stock_rotation"
+      ]
+    },
+    {
+      "source": "Bloomberg Markets",
+      "title": "Asian Stocks Rise as Tech Leads, Bonds in Focus: Markets Wrap",
+      "published_at": "2026-09-30T06:12:50+08:00",
+      "used_in": [
+        "focus"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "UniQure plunges as Huntington's trial data disappoints investors",
+      "published_at": "2026-09-30T06:11:44.206000+08:00",
+      "used_in": [
+        "stock_rotation"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "US NRC approves construction of nation's first small modular nuclear reactor",
+      "published_at": "2026-09-30T06:03:43.801000+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "Bloomberg Markets",
+      "title": "Latest Oil Market News and Analysis for Sept. 30",
+      "published_at": "2026-09-30T06:02:03+08:00",
+      "used_in": [
+        "iran",
+        "commodity"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "Unions at Antofagasta's Centinela copper mine ready for strike",
+      "published_at": "2026-09-30T05:56:08.185000+08:00",
+      "used_in": [
+        "commodity"
+      ]
+    },
+    {
+      "source": "Bloomberg Markets",
+      "title": "There Are Some Chills in T-Bills",
+      "published_at": "2026-09-30T05:36:08+08:00",
+      "used_in": [
+        "focus",
+        "macro"
+      ]
+    },
+    {
+      "source": "CNBC Top News",
+      "title": "Most traders are looking at Micron into earnings. But don't count out Nike",
+      "published_at": "2026-09-30T05:34:48+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "Stocks dip, 2-year US yield falls after Fed's Williams cools rate hike bets",
+      "published_at": "2026-09-30T05:34:42.114000+08:00",
+      "used_in": [
+        "focus",
+        "macro"
+      ]
+    },
+    {
+      "source": "Bloomberg Markets",
+      "title": "Tesla Lines Up $30 Billion to Borrow With Spending on the Rise",
+      "published_at": "2026-09-30T05:19:19+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "Trump says he does not know if Iran is going to 'give up yet'",
+      "published_at": "2026-09-30T05:12:09.882000+08:00",
+      "used_in": [
+        "iran"
+      ]
+    },
+    {
+      "source": "CNBC Top News",
+      "title": "The Fed's main inflation measure will be released Wednesday. Here's what to expect",
+      "published_at": "2026-09-30T04:51:43+08:00",
+      "used_in": [
+        "focus",
+        "macro"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "Fed's Williams sees no urgency for next Fed rate hike",
+      "published_at": "2026-09-30T04:50:18.614000+08:00",
+      "used_in": [
+        "focus",
+        "macro"
+      ]
+    },
+    {
+      "source": "Bloomberg Markets",
+      "title": "Paramount Deal Delay Fuels Fears of Costly $52 Billion M&A Debt",
+      "published_at": "2026-09-30T04:46:04+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "CNBC Top News",
+      "title": "Prediction market traders think the U.S. added more jobs in September than economists estimate",
+      "published_at": "2026-09-30T04:33:08+08:00",
+      "used_in": [
+        "focus",
+        "macro"
+      ]
+    },
+    {
+      "source": "富途牛牛",
+      "title": "黄金维持震荡 市场权衡油价回落与加息压力",
+      "published_at": "2026-09-30T08:17:05+08:00",
+      "used_in": [
+        "commodity"
+      ]
+    },
+    {
+      "source": "华尔街见闻·美股直播",
+      "title": "美股期货走高，纳斯达克100指数期货上涨0.4%。",
+      "published_at": "2026-09-30T08:09:04+08:00",
+      "used_in": [
+        "focus"
+      ]
+    },
+    {
+      "source": "金十数据快讯",
+      "title": "【期货热点追踪】多空博弈加剧，智利罢工隐忧托底伦铜，强势美元与需求隐忧压制反弹空间，需重点关注智利矿山劳资谈判的最终进展。",
+      "published_at": "2026-09-30T08:03:10+08:00",
+      "used_in": [
+        "commodity"
+      ]
+    },
+    {
+      "source": "金十数据快讯",
+      "title": "【日韩股市高开】金十数据9月30日讯，日经225指数9月30日（周三）开盘上涨600.53点，涨幅0.92%，报66081.80点。韩国KOSPI指数9月30日（周三）开盘上涨79.51点，涨幅1.16%，报6950.32点。",
+      "published_at": "2026-09-30T08:02:01+08:00",
+      "used_in": [
+        "focus"
+      ]
+    },
+    {
+      "source": "富途牛牛",
+      "title": "传媒行业月度点评：消费级AI智能体Muse登顶美区应用榜，出版业“十五五”规划明确转型方向",
+      "published_at": "2026-09-30T08:00:00+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "金十数据快讯",
+      "title": "【燃料涨价推高美国机票价格 创十年新高】金十数据9月30日讯，当地时间29日，受油价高企影响，美国航空燃料价格近期暴涨，推高美国机票价格，今年11月末传统假日期间美国境内航班机票价格较去年同期上涨约31%，达到十年来最高点。据悉，如果航空燃",
+      "published_at": "2026-09-30T07:58:11+08:00",
+      "used_in": [
+        "stock_rotation",
+        "iran"
+      ]
+    },
+    {
+      "source": "富途牛牛",
+      "title": "财联社9月30日电，英伟达的黄仁勋表示，人工智能创新与安全之间不存在冲突",
+      "published_at": "2026-09-30T07:52:12+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "金十数据快讯",
+      "title": "日本8月工业产出年率初值 3.4%，预期7.00%，前值3.90%。",
+      "published_at": "2026-09-30T07:50:39+08:00",
+      "used_in": [
+        "macro"
+      ]
+    },
+    {
+      "source": "金十数据快讯",
+      "title": "日本8月季调后零售销售月率 -1.2%，预期-0.90%，前值由2.40%修正为2.10%。",
+      "published_at": "2026-09-30T07:50:30+08:00",
+      "used_in": [
+        "macro"
+      ]
+    },
+    {
+      "source": "金十数据快讯",
+      "title": "日本8月工业产出月率初值 -1.7%，预期1.70%，前值-0.20%。",
+      "published_at": "2026-09-30T07:50:06+08:00",
+      "used_in": [
+        "macro"
+      ]
+    },
+    {
+      "source": "富途牛牛",
+      "title": "中信建投：Meta Muse加速智能体商业化，云栖大会强化全栈AI布局",
+      "published_at": "2026-09-30T07:45:32+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "富途牛牛",
+      "title": "【快思考】阿斯麦估值溢价跌至历史低位，AI扩产与提价权或驱动业绩重估！",
+      "published_at": "2026-09-30T07:43:31+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "金十数据",
+      "title": "美伊谈判几无进展：双方都不让步，特朗普中期选举后或重启大规模战事",
+      "published_at": "2026-09-30T07:39:39+08:00",
+      "used_in": [
+        "iran"
+      ]
+    },
+    {
+      "source": "富途牛牛",
+      "title": "反AI情绪升温之际，特朗普竟给AI改名“SI”：拒绝加监管，转向企业自律",
+      "published_at": "2026-09-30T07:39:00+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "富途牛牛",
+      "title": "比亚迪：在智能化下半场，半导体和软件甚至比电池更为重要",
+      "published_at": "2026-09-30T07:37:47+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "富途牛牛",
+      "title": "FSD体验跃迁、擎天柱冲刺量产之际，300亿美元备用授信护航!特斯拉(TSLA.US)加速推进马斯克的“物理AI超级宏图”",
+      "published_at": "2026-09-30T07:36:12+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "华尔街见闻·美股直播",
+      "title": "美股三大指数两连跌，30年期美债收益率触及2002年高位，原油下跌，黄金反弹。\n\n中央财政史上首次！“房贷贴息”节前落地：首套、120平方米以下、150万元以内可享。\n\n中国央行“出手”：“降息”、加大“六张网”金融支持、扩大“再贷款额度”",
+      "published_at": "2026-09-30T07:25:03+08:00",
+      "used_in": [
+        "focus",
+        "macro",
+        "commodity",
+        "iran"
+      ]
+    },
+    {
+      "source": "金十数据",
+      "title": "2026年9月30日金十期货早餐：财政部称从10月1日起对居民使用新发放商业性个人住房贷款购房实施贴息",
+      "published_at": "2026-09-30T07:23:47+08:00",
+      "used_in": [
+        "macro"
+      ]
+    },
+    {
+      "source": "富途牛牛",
+      "title": "深夜 美国大消息：特朗普发布人工智能协议 能源部计划释放4000万桶战略石油储备 美联储加息概率骤降！节前最后一个交易日，如何应对？",
+      "published_at": "2026-09-30T07:20:00+08:00",
+      "used_in": [
+        "ai_tech",
+        "iran",
+        "commodity",
+        "macro"
+      ]
+    },
+    {
+      "source": "金十数据快讯",
+      "title": "【金十数据整理：每日科技要闻速递（9月30日）】 人工智能： 1. 特朗普与AI巨头签署“具有道德约束力”的人工智能文件，还改名AI为SI。 2. OpenAI推出GPT-6.1 Sol模型。 3. OpenAI推出全天候自主智能体Dots",
+      "published_at": "2026-09-30T07:16:14+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "富途牛牛",
+      "title": "8月智能驾驶域控和芯片市场：智驾芯片英伟达居首，地平线不断追近距离",
+      "published_at": "2026-09-30T07:16:00+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    }
+  ],
+  "sections": [
+    {
+      "id": "focus",
+      "title": "头号焦点 | 长端美债触2002年高位，威廉姆斯为加息预期降温",
+      "bullets": [
+        "30年期美债收益率周二触及[[c:2002年6月以来最高水平]]，道指下跌超100点，美股三大指数两连跌：标普500收报7670.84点，[[green:跌0.17%]]；纳指收报26797.54点，跌0.09%；道指收报51349.92点，跌0.26%。缓冲来自美联储“三把手”：纽约联储主席威廉姆斯表示[[c:下一次加息没有紧迫性]]，年内晚些时候或再加息一次但不必急于行动，2年期美债收益率随之回落，市场对10月加息的定价从约70%下降。今早10年期美债收益率报5.23%，[[red:回落1.8个基点]]，纳斯达克100指数期货[[red:上涨0.4%]]。课代表看，短端降温、长端仍高，估值压力减轻的幅度有限，真正的松动要等通胀数据确认。",
+        "交叉验证来自盘面内部：费城半导体指数[[red:逆势涨1.32%]]至12629.16点，美光收涨1.05%，Meta[[red:涨3.24%]]，而英伟达跌0.72%、苹果[[green:跌2.66%]]、特斯拉跌1.29%；恐慌指数VIX报16.04，微跌0.19%。日经225指数开盘涨0.92%至66081.80点，韩国KOSPI开盘[[red:涨1.16%]]至6950.32点。课代表看，半导体在长端利率创多年新高时仍能收红，说明[[c:AI上游的盈利预期仍在对冲估值压缩]]，此前的回调更多是交易层面的仓位调整而非基本面逆转。反方信号是韩国股市400亿美元回购支撑将提前结束，亚洲科技修复仍需成交量确认。",
+        "今晚20:30的8月核心PCE物价指数是本周利率定价的[[c:第一道关口]]，市场预期数据将显示价格压力持续、消费者仍在支出；预测市场交易员还押注9月非农新增就业高于经济学家预期。若PCE偏热，威廉姆斯刚压下的10月加息定价可能再度回升，长端收益率重新上冲，[[green:科技与黄金会同时承压]]；若PCE温和，短端回落有望向长端传导，给成长股估值留出喘息空间。课代表框架下，今天的交易重点是控制节奏：利率未回落前不追高，AI上游核心仓位不因单日波动砍掉，美光盘后财报是紧随其后的第二道验证。"
+      ],
+      "note": "短端因威廉姆斯表态降温、长端仍在高位；半导体逆势走强说明AI上游定价未坏，今晚PCE决定加息预期是否重新抬头。"
+    },
+    {
+      "id": "ai_tech",
+      "title": "AI·芯片·科技 | 模型与智能体加速迭代，美光财报成上游试金石",
+      "bullets": [
+        "美光将于周三美股盘后发布财报，成为本周交易员最关注的焦点，其股价周二收于1065.08美元，[[red:涨1.05%]]；费城半导体指数当日涨1.32%，与英伟达跌0.72%形成分化，资金从大市值龙头向存储等弹性环节扩散。设备端，阿斯麦估值溢价跌至[[c:历史低位]]，市场开始讨论AI扩产与提价权驱动的业绩重估。课代表看，[[c:存储量价与设备订单]]是AI上游超级周期中最硬的验证，美光指引若继续上修，将为高利率环境下的半导体估值提供[[red:盈利端支撑]]；若指引低于预期，存储板块短线波动会被放大。",
+        "OpenAI推出GPT-6.1 Sol模型，同时发布全天候自主智能体Dots，与Meta在自主AI领域正面竞争；OpenAI年度经常性收入接近[[c:700亿美元]]。Meta方面，消费级AI智能体Muse登顶美区应用榜，中信建投认为[[c:Muse加速智能体商业化]]，Meta周二收涨3.24%。国内DeepSeek Harness v0.2预览版正式发布。另一面，研究显示中国AI智能体与美国同类产品一样会出现撒谎与策划行为，安全问题仍在发酵。课代表看，智能体从对话走向全天候执行，单个用户消耗的推理算力成倍增长，[[red:推理需求扩张]]是算力链最直接的传导；安全争议会影响发布节奏，但不改变需求方向，下一步看智能体留存与付费转化。",
+        "特斯拉敲定[[c:300亿美元]]新增贷款和信贷额度，用于加码人工智能与机器人投资，但特斯拉股价跌1.29%，市场对加杠杆扩张仍有分歧。能源侧，美国核管会批准全国首座小型模块化核反应堆建设，[[c:为数据中心电力瓶颈打开新供给]]。派拉蒙天舞为收购华纳兄弟探索发行的520亿美元并购债融资成本上升，显示高利率正在抬高融资门槛。课代表看，AI资本开支的方向没有变化，电力与设备环节的需求确定性最高；但[[green:融资成本抬升]]会让现金流更强的云巨头和上游龙头胜出，依赖外部融资的公司估值更易被利率压制。",
+        "特朗普与科技巨头签署一份“具有道德约束力”的人工智能文件，美国众议院议长称AI行业就技术标准签署了协议；特朗普还将AI改称“超级智能（SI）”，拒绝加强监管、转向企业自律，马斯克与黄仁勋也改口称SI。黄仁勋表示人工智能创新与安全之间不存在冲突。背景是民调显示特朗普在AI议题上支持率下滑。智驾芯片方面，8月英伟达市场份额居首、地平线不断追近，比亚迪表示在智能化下半场半导体和软件甚至比电池更重要。课代表看，[[c:监管以自律为主]]降低了短期政策风险，[[red:终端对芯片的依赖度]]持续提升；但中期选举前反AI情绪升温，是需要跟踪的政治变量。"
+      ],
+      "note": "模型、智能体、核电与融资同日推进，AI上游需求链条完整；美光指引与反AI民意是本周两大验证点。"
+    },
+    {
+      "id": "stock_rotation",
+      "title": "资金轮动 | 指数微跌下的高低切换：半导体与Meta走强，苹果承压",
+      "bullets": [
+        "标普500与纳指跌幅均不足0.2%，道指跌0.26%，VIX维持16附近，指数层面是[[c:窄幅震荡而非恐慌抛售]]。内部结构分化明显：费半涨1.32%、Meta涨3.24%、美光涨1.05%，苹果[[green:跌2.66%]]、特斯拉跌1.29%、英伟达跌0.72%，资金从消费电子和高估值龙头流向存储与有智能体商业化催化的平台公司。海外看，蒙古股市凭借大宗商品繁荣有望成为本季度全球表现最好的市场，与AI交易的波动形成隔离；韩国股市则面临[[green:400亿美元回购支撑提前结束]]。课代表看，这种轮动是AI主线内部的再定价，资金没有离开科技，只是在利率高位下更挑剔盈利确定性。",
+        "科技之外的独立催化集中在国防与医药：波音赢得美国海军下一代战斗机合同，国防订单提供独立于利率的增长线索；礼来实验性药物在糖尿病试验中[[red:减重21%]]，减重药赛道再添数据，而uniQure因亨廷顿病试验数据令人失望而暴跌。航空链承压：受航空燃料价格暴涨影响，今年11月末假日期间美国境内机票价格同比上涨约31%，创十年新高。课代表看，[[c:国防与医药]]是利率之外的独立机会，持续性取决于订单与临床数据的后续兑现；燃油成本向机票的传导则说明能源通胀正在向服务价格扩散，这正是美联储最担心的环节。"
+      ],
+      "note": "指数平静、内部换手剧烈：存储与AI平台受青睐，消费电子承压；国防医药提供独立催化，机票涨价印证能源通胀扩散。"
+    },
+    {
+      "id": "iran",
+      "title": "中东地缘 | 卡塔尔斡旋未破局，沙特管道分流压低供给风险",
+      "bullets": [
+        "卡塔尔调解方正在推动美伊之间达成和平协议，但谈判几无实质进展，双方都不让步；特朗普表示不知道伊朗是否“准备好放弃”。市场同时在讨论一种风险情景：若谈判久拖不决，特朗普中期选举后可能重启大规模战事。课代表看，[[c:口头斡旋与已执行动作要严格区分]]：目前没有任何一方就核问题或海峡开放作出可核实的书面让步，协议预期只能算情绪变量；互不信任的死结不解，局势大概率延续打打谈谈，油价也会随消息反复。",
+        "现实验证更多来自供给端：沙特恢复通过绕开霍尔木兹海峡的管道输油，中东原油供应已回升至[[c:接近战前水平]]，油价录得一周多来最大跌幅后企稳；美国能源部计划释放4000万桶战略石油储备，布伦特原油期货今早报96.16美元，[[red:涨0.47%]]。课代表看，管道分流加上战略储备释放，使海峡风险对实际供应的冲击小于新闻标题；但航空燃料推高机票价格说明成品油端仍然紧张，[[green:终端通胀压力]]未完全消退。",
+        "地缘对黄金的影响主要沿“油价→通胀→利率”链条传导：油价回落缓解能源推动的通胀担忧，降低美联储继续加息的必要性，对黄金和成长股估值都是减压；反之若谈判破裂、油价重新上冲，通胀预期抬升会推高实际利率，对黄金构成[[green:利率端压力]]。升级条件是谈判破裂或能源设施再遭袭击，缓和条件是美伊就核问题形成可核实的阶段性安排。课代表看，[[c:战略储备释放与管道分流]]已为油价设定一定上限，地缘冲击的边际定价力在下降。"
+      ],
+      "note": "斡旋未破局、供给缓冲增加，油价上冲空间受限；地缘经油价与利率影响黄金，关注谈判能否出现可核实让步。"
+    },
+    {
+      "id": "macro",
+      "title": "宏观·利率 | 加息押注从10月转向年内一次，PCE与非农检验鹰派定价",
+      "bullets": [
+        "30年期美债收益率触及2002年6月以来高位，10年期今早报5.23%、[[red:回落1.8个基点]]，美元指数报101.42，微涨0.04%。威廉姆斯讲话后2年期收益率回落，市场对10月加息的定价从约70%下降，[[c:短端降温、长端高企]]的曲线结构反映出市场对财政供给与期限溢价的担忧。债市结构也在变化：对冲基金在30万亿美元美债市场中的持有份额创纪录，短期国债出现买盘退潮。课代表看，长端利率是当前科技与黄金共同的逆风，短端降温只是减压而非转向。",
+        "按最新事实设三种情景：基准情景是威廉姆斯口径，年内晚些时候[[c:再加息一次]]但不急于10月行动；偏好情景是PCE温和、就业放缓，加息推迟、长端回落；偏坏情景是PCE偏热叠加油价反弹，10月加息定价重回70%上方。海外数据方面，日本8月工业产出月率初值[[green:-1.7%]]，远逊于预期的1.7%，零售销售月率-1.2%。中国央行“降息”并扩大再贷款额度、加大“六张网”金融支持，财政部从10月1日起对居民新发放商业性个人住房贷款实施贴息，限首套、120平方米以下、150万元以内。课代表看，中美政策方向相反，[[red:国内宽松]]对港股与A股情绪有支撑。",
+        "下一组验证窗口很密集：今晚20:15公布9月ADP就业、20:30公布8月核心PCE物价指数年率，10月2日周五公布9月非农与失业率。课代表看，[[c:PCE决定加息节奏、非农决定加息必要性]]：若两者都偏热，长端收益率可能继续上冲，科技估值与黄金同步承压；若PCE回落而就业稳健，则是软着陆叠加加息尾声的组合，最有利于AI上游修复。国庆长假期间美股与黄金照常交易，国内持仓无法调整，[[green:假期敞口风险]]需要提前控制。"
+      ],
+      "note": "基准为年内再加一次但不急于10月；PCE与非农是证伪窗口，长端利率高位仍是科技与黄金的共同逆风。"
+    },
+    {
+      "id": "commodity",
+      "title": "大宗·外汇 | 油价回落为黄金减压，长端利率仍是金价天花板",
+      "bullets": [
+        "**黄金**：现货黄金今早报4182.93美元，[[red:微涨0.03%]]，周二反弹后维持震荡，市场一边权衡油价回落缓解能源通胀担忧，一边面对仍在高位的美债收益率。黄金不生息，长端利率越高持有机会成本越大，这是近期金价承压的核心原因；但威廉姆斯压低10月加息预期、油价回落，都在边际上减轻利率端压力。课代表看，4100美元附近已进入[[c:中长期配置的价值区间]]，适合分批而非一次性布局；右侧确认条件是PCE温和、10年期美债收益率从5.2%上方回落。反方风险是PCE偏热推高加息预期，金价仍可能再下探。",
+        "**布伦特原油期货+美元指数**：布伦特原油期货今早报96.16美元，[[red:涨0.47%]]，此前录得一周多来最大跌幅，沙特管道恢复与4000万桶战略储备释放计划增加了供给缓冲；美元指数报101.42，微涨0.04%，强势美元与需求隐忧压制伦铜反弹，智利Centinela铜矿工会准备罢工则对铜价形成托底。课代表看，油价回落对通胀是减压，美元高位则维持对大宗的估值压制，[[c:油价回落、美元持稳]]的组合对黄金偏中性，决定金价方向的仍是实际利率。"
+      ],
+      "note": "油价供给缓冲增加、美元高位持稳，黄金短期看利率、中期看配置价值，PCE是本周最关键变量。"
+    }
+  ]
+}
