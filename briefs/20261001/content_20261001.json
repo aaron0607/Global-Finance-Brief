@@ -1,0 +1,462 @@
+{
+  "date_yyyymmdd": "20261001",
+  "date_cn": "2026年10月1日（周四）",
+  "as_of": "2026-10-01T08:20:48+08:00",
+  "main_title": "核心PCE低于预期·美光指引超预期<br>10年美债升至5.30%·道指跌0.86%",
+  "alert_time": "08:20",
+  "alert": "**过去24小时核心变化**：美国8月[[c:核心PCE同比上涨3%]]，低于预期，美股高开后涨幅被尾盘抹去，道指[[green:跌0.86%]]、标普500三连跌，纳指[[red:涨0.24%]]。盘后美光业绩与指引双双超预期，[[red:数据中心收入跃升11倍]]，韩国9月半导体出口创历史新高。副线上，卡什卡利称通胀仍过高并预计今明两年各再加息一次，10年期美债收益率升至5.30%。当天交易结构是：通胀降温抵不过长端利率高企，资金只认AI上游的盈利兑现。",
+  "qdii_date_label": "估算基于2026年9月30日（周三）最近交易日收盘",
+  "logic_chain": {
+    "paths": [
+      {
+        "name": "路径A（科技主线·存储业绩兑现）",
+        "color": "#534AB7",
+        "body": "美光数据中心收入跃升11倍<br>韩国9月半导体出口创新高",
+        "sub": "订单积压与存储涨价能否延续"
+      },
+      {
+        "name": "路径B（宏观逆风·长端利率高企）",
+        "color": "#A32D2D",
+        "body": "核心PCE低于预期但收益率升至5.30%<br>卡什卡利预计今明两年各加息一次",
+        "sub": "周五非农与10年期美债走向"
+      },
+      {
+        "name": "路径C（独立变量·油价与黄金）",
+        "color": "#0F6E56",
+        "body": "布油98美元附近企稳、柴油出口禁令待定<br>黄金4143美元在利率与通胀间拉扯",
+        "sub": "中东供应恢复能否持续"
+      }
+    ],
+    "priority": "今日验证顺序：①20:30 初请失业金人数 ②22:00 美国9月ISM制造业PMI ③周五非农与失业率 ④10年期美债收益率能否回落"
+  },
+  "calendar": [
+    {
+      "date": "10月1日 周四",
+      "date_iso": "2026-10-01",
+      "event": "17:00 欧元区8月失业率",
+      "stars": 3
+    },
+    {
+      "date": "10月1日 周四",
+      "date_iso": "2026-10-01",
+      "event": "17:30 美国9月挑战者企业裁员人数",
+      "stars": 2
+    },
+    {
+      "date": "10月1日 周四",
+      "date_iso": "2026-10-01",
+      "event": "20:30 美国至9月26日当周初请失业金人数",
+      "stars": 3
+    },
+    {
+      "date": "10月1日 周四",
+      "date_iso": "2026-10-01",
+      "event": "22:00 美国9月ISM制造业PMI",
+      "stars": 3
+    },
+    {
+      "date": "10月2日 周五",
+      "date_iso": "2026-10-02",
+      "event": "20:30 美国9月季调后非农就业人口、失业率",
+      "stars": 3
+    }
+  ],
+  "sources": [
+    {
+      "source": "Bloomberg Markets",
+      "title": "Gold Steady as Softer Inflation Data Tempers Fed Rate-Hike Bets",
+      "published_at": "2026-10-01T08:08:16+08:00",
+      "used_in": [
+        "commodity",
+        "macro"
+      ]
+    },
+    {
+      "source": "CNBC Top News",
+      "title": "Stock futures rise as traders eye elevated Treasury yields, brace for jobs report due this week: Live updates",
+      "published_at": "2026-10-01T08:05:45+08:00",
+      "used_in": [
+        "focus"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "US inflation rises below expectations in August, gives the Fed breathing space",
+      "published_at": "2026-10-01T08:00:30.522000+08:00",
+      "used_in": [
+        "focus"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "US second-quarter GDP revised higher amid robust consumer spending",
+      "published_at": "2026-10-01T07:59:41.790000+08:00",
+      "used_in": [
+        "focus"
+      ]
+    },
+    {
+      "source": "CNBC Top News",
+      "title": "Fed's Kashkari says inflation is 'still too high' even after softer-than-expected PCE data, labor market is 'pretty good'",
+      "published_at": "2026-10-01T07:44:28+08:00",
+      "used_in": [
+        "focus",
+        "macro"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "S&P 500 dips, Nasdaq higher after data shows moderate inflation rise",
+      "published_at": "2026-10-01T07:40:05.441000+08:00",
+      "used_in": [
+        "focus",
+        "stock_rotation"
+      ]
+    },
+    {
+      "source": "CNBC Top News",
+      "title": "Thursday's big stock stories: What’s likely to move the market in the next trading session",
+      "published_at": "2026-10-01T07:07:50+08:00",
+      "used_in": [
+        "focus",
+        "stock_rotation"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "Micron's AI-fueled revenue forecast blows past estimates, backlog swells",
+      "published_at": "2026-10-01T07:06:03.672000+08:00",
+      "used_in": [
+        "focus",
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "Bloomberg Markets",
+      "title": "US Stock Futures Advance, Bond Yields in Focus: Markets Wrap",
+      "published_at": "2026-10-01T06:19:53+08:00",
+      "used_in": [
+        "focus",
+        "stock_rotation"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "Bonds post worst month in years; stocks decline for September and oil gains",
+      "published_at": "2026-10-01T06:12:47.076000+08:00",
+      "used_in": [
+        "focus",
+        "macro",
+        "commodity"
+      ]
+    },
+    {
+      "source": "Bloomberg Markets",
+      "title": "CCC Debt Turns Distressed for First Time Since 2023 Crisis",
+      "published_at": "2026-10-01T06:10:05+08:00",
+      "used_in": [
+        "macro"
+      ]
+    },
+    {
+      "source": "Bloomberg Markets",
+      "title": "Latest Oil Market News and Analysis for Oct. 1",
+      "published_at": "2026-10-01T06:02:36+08:00",
+      "used_in": [
+        "commodity"
+      ]
+    },
+    {
+      "source": "CNBC Top News",
+      "title": "Micron beats on earnings and issues strong guidance as data center revenue jumps 11-fold",
+      "published_at": "2026-10-01T04:59:05+08:00",
+      "used_in": [
+        "focus",
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "金十数据快讯",
+      "title": "韩国海关：韩国九月半导体出口创历史新高。",
+      "published_at": "2026-10-01T08:00:29+08:00",
+      "used_in": [
+        "focus",
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "金十数据快讯",
+      "title": "韩国9月出口年率 83.5%，预期61.7%，前值由68.70%修正为68.70%。",
+      "published_at": "2026-10-01T08:00:02+08:00",
+      "used_in": [
+        "focus"
+      ]
+    },
+    {
+      "source": "华尔街见闻·美股直播",
+      "title": "美PCE后，三大美股指集体高开，但收盘涨跌不一，标普和道指三连跌，纳指反弹。\n\n《求是》杂志10月1日发表中共中央总书记重要文章《加强普惠性、基础性、兜底性民生建设》。\n\n中国9月官方PMI双双升至扩张区间：制造业为50.1，非制造业为50",
+      "published_at": "2026-10-01T07:36:51+08:00",
+      "used_in": [
+        "focus",
+        "macro",
+        "stock_rotation"
+      ]
+    },
+    {
+      "source": "富途牛牛",
+      "title": "美联储卡什卡利：通胀仍需压制，预计今年和明年各再加息一次",
+      "published_at": "2026-10-01T07:35:00+08:00",
+      "used_in": [
+        "focus",
+        "macro"
+      ]
+    },
+    {
+      "source": "富途牛牛",
+      "title": "明尼阿波利斯联储行长认为AI并非美国经济增长的唯一动力 通胀仍过高",
+      "published_at": "2026-10-01T07:51:15+08:00",
+      "used_in": [
+        "macro"
+      ]
+    },
+    {
+      "source": "CNBC Top News",
+      "title": "Google rolls out Gemini 4 Argon, its most advanced AI model",
+      "published_at": "2026-10-01T06:27:09+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "金十数据快讯",
+      "title": "人工智能： 1. 谷歌推出Gemini 4 Argon。 2. DeepSeek 开源昇腾基础组件。 3. 据华尔街日报：英伟达、Meta等AI巨头质疑Anthropic“过度警告”。 4. 微信：新版WorkBuddy现已支持用自然语言生",
+      "published_at": "2026-10-01T08:03:18+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "CNBC Top News",
+      "title": "OpenAI links China’s Moonshot AI to attempt to extract its models’ reasoning",
+      "published_at": "2026-10-01T08:04:29+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "Synopsys, Amazon Web Services sign chip design licensing deal worth more than $1 billion",
+      "published_at": "2026-10-01T06:01:32.744000+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "Constellation, Amazon sign 20-year power deal to support Maryland nuclear plant",
+      "published_at": "2026-10-01T05:24:51.982000+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "FERC asks grid operator PJM to revise plan to shield homes from data center costs",
+      "published_at": "2026-10-01T05:57:04.039000+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "CScale raises $145 million for AI networking, with backing from Nvidia and Intel",
+      "published_at": "2026-10-01T05:05:08.008000+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "富途牛牛",
+      "title": "AI基建供应商Accelevation纳斯达克上市：40亿美元 路演PPT曝光",
+      "published_at": "2026-10-01T07:18:13+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "富途牛牛",
+      "title": "芯闻 | 长电高端封测项目落地无锡，硅转接板2.5D封装卡位AI算力市场",
+      "published_at": "2026-10-01T07:30:00+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "富途牛牛",
+      "title": "芯闻 | 华海清科定增收官，近38亿元募资加码半导体装备",
+      "published_at": "2026-10-01T07:30:00+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "Bloomberg Markets",
+      "title": "Gina Rinehart Backed Lynas to Buy Rare Earths Miner Meteoric",
+      "published_at": "2026-10-01T07:40:47+08:00",
+      "used_in": [
+        "ai_tech",
+        "stock_rotation"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "Anthropic's IPO pitch embraces AI's promise and peril",
+      "published_at": "2026-10-01T08:13:49.002000+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "CNBC Top News",
+      "title": "California Gov. Gavin Newsom bans AI 'robo bosses' in landmark state law, reversing his earlier veto",
+      "published_at": "2026-10-01T07:50:01+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "CNBC Top News",
+      "title": "Meta stock enjoys best month since 2022 on AI momentum",
+      "published_at": "2026-10-01T05:36:47+08:00",
+      "used_in": [
+        "stock_rotation"
+      ]
+    },
+    {
+      "source": "CNBC Top News",
+      "title": "Cramer says 'frozen' conditions are holding many stocks back. Here's what could change that",
+      "published_at": "2026-10-01T07:00:52+08:00",
+      "used_in": [
+        "stock_rotation"
+      ]
+    },
+    {
+      "source": "CNBC Top News",
+      "title": "David Ellison names Ynon Kreiz co-CEO of Paramount and Warner Bros. Discovery",
+      "published_at": "2026-10-01T07:01:40+08:00",
+      "used_in": [
+        "stock_rotation"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "Regeneron weight-loss drug halves muscle loss in combination with Novo's semaglutide in trial",
+      "published_at": "2026-10-01T06:30:24.441000+08:00",
+      "used_in": [
+        "stock_rotation"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "Liquidia slumps after US court rules for United Therapeutics in patent fight",
+      "published_at": "2026-10-01T05:10:10.217000+08:00",
+      "used_in": [
+        "stock_rotation"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "Supervisors at BHP Escondida mine in Chile reject offer, paving way for strike",
+      "published_at": "2026-10-01T06:13:05.735000+08:00",
+      "used_in": [
+        "stock_rotation",
+        "commodity"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "Watchdog finds no Fed misconduct in renovation; Trump calls for Powell's resignation",
+      "published_at": "2026-10-01T07:15:22.436000+08:00",
+      "used_in": [
+        "macro"
+      ]
+    },
+    {
+      "source": "Bloomberg Markets",
+      "title": "UMich’s Stevenson on Fed Report, Inflation Reading",
+      "published_at": "2026-10-01T05:26:26+08:00",
+      "used_in": [
+        "macro"
+      ]
+    },
+    {
+      "source": "CNBC Top News",
+      "title": "Trump 'thinking about' diesel export ban, but says it could have 'negative impact' on gasoline",
+      "published_at": "2026-10-01T06:43:53+08:00",
+      "used_in": [
+        "commodity"
+      ]
+    },
+    {
+      "source": "华尔街见闻·美股直播",
+      "title": "据英国方面9月30日消息，美国总统特朗普与其顾问就平抑油价措施进行紧急讨论，顾问提出的多种方案中包括实施柴油出口禁令。\n\n据悉，美国政府官员已向包括英国在内的外国盟友通报了有关其燃料供应可能受到干扰的情况。一名白宫官员表示，特朗普正在评估能",
+      "published_at": "2026-10-01T08:06:51+08:00",
+      "used_in": [
+        "commodity"
+      ]
+    }
+  ],
+  "sections": [
+    {
+      "id": "focus",
+      "title": "头号焦点 | 通胀降温抵不过长端利率，美光用业绩撑住AI主线",
+      "bullets": [
+        "统计口径修改后，美联储青睐的通胀指标[[c:核心PCE物价指数8月同比上涨3%]]，低于预期；同期消费者支出增长强劲，二季度实际GDP年化季环比终值上修至2.2%。数据公布后三大指数集体高开，但尾盘波动抹去了涨幅，收盘涨跌不一：标普500收报7651.54点，[[green:跌0.25%]]；道指收报50906.05点，[[green:跌0.86%]]，两者均为三连跌；纳指收报26861.06点，[[red:涨0.24%]]。课代表看，通胀温和本应带来估值修复，但增长数据同样强劲，市场判断美联储没有理由迅速转向，于是高开低走；[[c:增长越强、利率越难下来]]，这是当前美股的核心矛盾，周五非农是下一道检验。",
+        "美联储内部的声音印证了这种担忧。明尼阿波利斯联储主席卡什卡利表示，尽管PCE数据低于预期，[[c:通胀仍然过高]]，各口径下仍在3%左右且已高位运行超过五年，劳动力市场“相当不错”，并预计[[c:今年和明年各再加息一次]]，相当于给加息路径画出了延长线。10年期美债收益率今早报[[c:5.30%]]，上行1.2个基点。课代表看，短端加息押注降温与长端收益率高企并存，市场交易的已不是“下次加不加”，而是[[c:高利率要维持多久]]，这对缺乏盈利增长的板块压力最大。",
+        "AI上游在同一个夜晚给出了最硬的回应。美光周三盘后公布财报，[[red:业绩与指引双双超预期]]，AI驱动的营收预测大幅高于分析师预估，订单积压继续膨胀，[[red:数据中心收入跃升11倍]]；过去一年美光股价已上涨逾500%，周三收报1065.11美元。几乎同时，韩国海关数据显示[[red:9月半导体出口创历史新高]]，韩国9月出口同比增长83.5%，远高于61.7%的预期。课代表看，美国存储龙头的指引与全球主要存储出口国的出口数据在同一天互相印证，说明AI需求已从GPU扩散到存储，这是盈利层面的证据而非情绪；[[c:30%左右的盈利增速]]正是科技股扛住5%以上长债收益率的底气。风险在于业绩已被高股价部分定价，需要看订单积压能否持续转化为收入。",
+        "新季度的开局显示市场仍在寻找平衡。美股期货在亚洲早盘[[red:走高]]，市场一边消化较温和的通胀，一边面对高企的美债收益率和下一次利率决议的不确定性，并为本周就业报告做准备。信用市场的警报值得重视：美国最高风险的CCC级公司债利差[[green:升破1000个基点]]，为2023年地区银行危机以来首次。课代表看，高利率的压力正沿着“长债—信用—高杠杆企业”的链条传导，现金流充沛的AI龙头与依赖融资的弱资质企业将继续分化；当前不必过度看空，但仓位应集中在[[c:盈利能自我造血的科技资产]]，并留意信用利差是否继续走阔。"
+      ],
+      "note": "通胀降温未能压低长端利率，标普与道指三连跌；美光与韩国出口印证AI存储景气，信用利差走阔是需要盯紧的反方信号。"
+    },
+    {
+      "id": "ai_tech",
+      "title": "AI·芯片·科技 | 存储兑现、模型迭代与监管升温同日上演",
+      "bullets": [
+        "算力与芯片股在指数分化中保持稳健。英伟达收报228.38美元，[[red:涨0.51%]]；AMD收报611.76美元，[[red:涨0.69%]]；费城半导体指数收报12628.62点，基本持平，在道指下跌0.86%的背景下显示出[[c:相对抗跌]]的特征。产业资本仍在押注网络环节：AI网络公司CScale完成[[red:1.45亿美元融资]]，英伟达与英特尔参与投资；AI基建供应商Accelevation登陆纳斯达克，市场继续为AI基础设施提供资金。课代表看，这是AI主线内部的正常换手，而不是趋势逆转；[[c:网络、存储、设备]]等卖铲子环节的融资与订单仍在加速，资金没有离开AI，只是在利率高位下更看重盈利兑现。",
+        "模型层的竞争进一步提速。谷歌推出[[c:Gemini 4 Argon]]，这是Alphabet迄今最先进的模型，在编程、网络安全和复杂专业工作方面均有大幅提升。中国模型同步推进：DeepSeek开源昇腾基础组件，Kimi K3接入OpenAI Codex企业通道，成为首个进入OpenAI企业付费结算体系的中国大模型；但OpenAI同时表示，发现有人试图提取其模型受保护的推理过程，并将部分活动与月之暗面关联，[[green:模型知识产权摩擦]]浮出水面。课代表看，模型代际更替缩短意味着训练与推理算力需求不会放缓，编程与专业任务能力提升直接对应[[red:企业付费推理需求增长]]；但国产算力生态与美国模型之间的合规边界正在收紧，相关合作需要看监管口径。",
+        "云厂商的资本开支正在向产业链深处延伸。Synopsys与亚马逊云科技签署[[red:逾10亿美元]]的芯片设计授权协议，亚马逊自研芯片的投入继续加码；Constellation与亚马逊签署[[c:20年期电力协议]]，支持马里兰州一座核电站的运营，数据中心对稳定电源的锁定周期拉长到二十年。但约束也在出现：美国联邦能源监管委员会要求电网运营商PJM修改方案，以[[green:保护居民免受数据中心成本转嫁]]。课代表看，芯片设计工具、核电长约和电网改造构成AI基础设施的“第二层卖铲子”，订单周期长、可见度高；电力成本分摊是未来最现实的瓶颈，监管若要求数据中心承担更多电网投资，将推高云厂商资本开支，但同时利好电力设备和冷却环节。",
+        "上游设备、封装与材料的扩产信号在中国与全球同步出现。长电科技高端封测项目落地无锡，以[[c:硅转接板2.5D封装]]卡位AI算力市场；华海清科定增收官，[[red:近38亿元]]募资加码半导体装备；晶合集成以股权作价增资安徽晶镁，加码半导体光罩业务。关键材料端，莱纳斯稀土将以约[[c:6.72亿美元]]的全股票交易收购Meteoric Resources，获得巴西的新稀土矿床。课代表看，先进封装、装备和光罩是AI上游超级周期中订单最先放量的环节，稀土并购则反映关键矿产的供应链安全溢价。",
+        "监管与资本市场的博弈同步升温。Anthropic的保密S-1文件曝光，其IPO叙事同时强调AI的潜力与风险；英伟达、Meta等AI巨头质疑Anthropic[[c:“过度警告”]]。美国联邦贸易委员会对Anthropic、OpenAI等超级智能模型开发方展开[[green:全面调查]]；加州州长纽森签署法律，禁止由AI“机器人老板”解雇员工，成为全美首例。课代表看，监管加码影响的是AI应用落地的节奏与合规成本，而非算力需求本身，白宫层面对AI的态度仍以[[red:支持发展、避免过度监管]]为主；但Anthropic若顺利上市，将为AI资产提供新的估值锚，监管与上市节奏需要一并跟踪。"
+      ],
+      "note": "存储业绩、模型迭代与AI基础设施订单共同验证上游景气；监管调查与电力成本分摊是需要跟踪的约束。"
+    },
+    {
+      "id": "stock_rotation",
+      "title": "资金轮动 | 道指领跌、科技权重托底，指数背后是窄幅抱团",
+      "bullets": [
+        "指数分化揭示了资金的去向：道指[[green:跌0.86%]]，标普500跌0.25%，纳指涨0.24%，VIX收于16.34，涨1.87%，属于温和避险而非恐慌。权重科技普遍收涨，苹果[[red:涨1.10%]]，微软涨0.77%，特斯拉涨0.56%，英伟达涨0.51%，Meta则在最佳单月后回吐1.84%。标普500九月整月收跌，市场广度依然偏窄。有观点认为，美国经济的几个关键部分实际上处于“冻结”状态，抑制了大量个股表现。课代表看，这种结构意味着[[c:资金向盈利确定性抱团]]，高利率敏感的周期与地产链继续承压，科技龙头成为少数能对冲利率的资产，但抱团越窄，单一利空引发的波动越大。",
+        "科技以外的独立催化集中在并购与医药。派拉蒙首席执行官埃里森宣布，美泰前掌门克雷茨将出任派拉蒙与华纳兄弟探索合并后公司的联席首席执行官；再生元减重药与诺和诺德司美格鲁肽联用的试验中，[[red:肌肉流失减半]]；Liquidia则因美国法院在专利纠纷中支持联合治疗公司而[[green:大跌]]。资源端，必和必拓智利Escondida铜矿主管拒绝资方报价，为罢工铺路。亚洲方面，中国9月官方制造业PMI升至50.1、非制造业升至50.2，双双重回[[red:扩张区间]]。课代表看，这些催化以个股事件为主，难以形成板块级轮动；A股假期前不确定性仍多，美股科技的盈利优势更明确，资金配置上[[c:美股科技优先、A股谨慎]]。"
+      ],
+      "note": "指数下跌而科技权重托底，资金向盈利确定性抱团；医药并购提供个股机会，A股节前宜谨慎。"
+    },
+    {
+      "id": "macro",
+      "title": "宏观·利率 | 加息押注降温但长端失守，美联储独立性再起波澜",
+      "bullets": [
+        "利率市场呈现“短端松、长端紧”的格局。较温和的通胀数据降低了美联储下次会议加息的押注，但10年期美债收益率今早报[[c:5.30%]]，较前收盘上行1.2个基点，债市刚刚经历多年来最差的单月表现。美元指数报101.49，微涨0.02%，维持高位。信用端出现更明确的压力信号：CCC级公司债相对美债的利差[[green:升破1000个基点]]，这一风险溢价水平通常意味着较高的违约概率。课代表看，长端利率居高不下既有通胀粘性，也有期限溢价的抬升，[[c:利率风险正在从估值层扩散到信用层]]；对科技股而言，强劲盈利能消化一部分压力，但若10年期收益率继续快速上行，估值仍会被压缩。",
+        "政策层面的分歧正在扩大。卡什卡利表示，伊朗战争造成的干扰持续时间[[c:超出此前预期]]，他已在缓慢上修对中性利率的判断，希望通过适度调整压低通胀；他认为当天的通胀数据并未在很大程度上改变其判断。与此同时，监察长调查认定美联储总部翻修[[c:不存在不当行为]]，特朗普仍呼吁鲍威尔辞职。密歇根大学经济学家史蒂文森表示，报告证实了这场调查的本质是总统在向美联储施压。课代表看，美联储独立性争议本身不改变加息路径，但会推高长端的[[green:政策不确定性溢价]]；在油价未明显回落之前，通胀预期仍难下来，这也是官员持续偏鹰的根本原因。",
+        "前瞻窗口高度集中：今晚20:30公布初请失业金人数，22:00公布[[c:9月ISM制造业PMI]]，周五20:30公布9月非农与失业率。课代表按最新事实设三种情景：基准情景是年内再加息一次，10月是否行动取决于就业与通胀数据；偏好情景是就业降温叠加油价回落，[[red:10月加息押注继续下降]]，长端收益率回落，科技与黄金同时减压；偏坏情景是非农强劲、油价再度上冲，10月加息并延续至2027年，[[green:长端收益率继续上行]]，高估值资产承压。课代表看，地缘与油价仍是串起通胀、利率与黄金的核心变量，任何能压低油价的协议进展都会让加息预期提前降温。"
+      ],
+      "note": "基准为年内再加一次、10月看数据；非农与ISM是证伪窗口，长端利率与信用利差是科技和黄金的共同逆风。"
+    },
+    {
+      "id": "commodity",
+      "title": "大宗·外汇 | 金价受困高利率，油价在供应恢复与柴油禁令间徘徊",
+      "bullets": [
+        "**黄金**：现货黄金今早报4143.06美元，[[green:跌0.33%]]，新月份开局整体企稳。较温和的通胀数据降低了美联储下次会议加息的押注，为金价提供支撑；但高企的美债收益率让重新抛售的风险依然存在。黄金不生息，美联储加息预期每上一个台阶，持有的机会成本就随之上升，[[c:利率是当前金价的天花板]]。课代表看，黄金应以长期资产配置的思路对待；右侧确认条件是10年期美债收益率从5.3%附近回落、10月加息押注继续下降，反方风险是非农超预期推高加息定价，金价可能再度下探。",
+        "**布伦特原油期货+美元指数**：布伦特原油期货今早报98.19美元，[[red:涨0.17%]]，前一交易日上涨后企稳，九月整月收涨，市场仍在怀疑中东供应的恢复能否持续。特朗普表示仍在考虑柴油出口禁令，但也承认可能对汽油产生负面影响，美国官员已向包括英国在内的盟友通报燃料供应可能受到干扰，政府尚未作出决定。美元指数报101.49，[[c:微涨0.02%]]，高位持稳。课代表看，油价沿着“油价—通胀—利率”链条影响黄金：油价若在百元附近徘徊，通胀预期与美元都难以回落，黄金的利率压力将延续；若中东供应恢复得到验证，油价回落将同时为通胀、利率和黄金减压。"
+      ],
+      "note": "油价百元附近徘徊、美元高位持稳，黄金短期受制于利率；中东供应恢复是金油美元共同的关键变量。"
+    }
+  ]
+}
