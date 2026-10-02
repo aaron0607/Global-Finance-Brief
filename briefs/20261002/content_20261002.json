@@ -1,0 +1,504 @@
+{
+  "date_yyyymmdd": "20261002",
+  "date_cn": "2026年10月2日（周五）",
+  "as_of": "2026-10-02T08:20:44+08:00",
+  "main_title": "存储光通信领涨·费半涨1.59%<br>10年美债触2002年来高位后回落",
+  "alert_time": "08:20",
+  "alert": "**过去24小时核心变化**：美股10月首个交易日惊险收涨，[[c:10年期美债收益率触及2002年以来高位]]后回落，费城半导体[[red:涨1.59%]]，美光[[red:涨3.03%]]，光通信与存储领涨，AI上游再度扛住利率压力。宏观端，核心PCE低于预估，两位美联储副主席称下一步需更多时间，10月加息预期降温，但达拉斯联储洛根呼吁[[green:至少再加息50个基点]]；地缘端美方考虑增派航母，布油站上102美元。当天交易结构是利率喘息托住科技，油价与鹰派声音继续压着黄金。",
+  "qdii_date_label": "估算基于2026年10月1日（周四）最近交易日收盘",
+  "logic_chain": {
+    "paths": [
+      {
+        "name": "路径A（科技主线·存储与光通信领涨）",
+        "color": "#534AB7",
+        "body": "费半涨1.59%、美光涨3.03%<br>博通拟向Anthropic提供最高420亿美元贷款",
+        "sub": "存储景气与算力融资能否延续"
+      },
+      {
+        "name": "路径B（宏观逆风·长端利率高位）",
+        "color": "#A32D2D",
+        "body": "10年美债触2002年来高位后回落<br>洛根呼吁至少再加息50个基点",
+        "sub": "今晚非农与10月议息定价"
+      },
+      {
+        "name": "路径C（独立变量·中东与油价）",
+        "color": "#0F6E56",
+        "body": "美方考虑增派航母、布油站上102美元<br>伊方权衡美方海峡提议回应",
+        "sub": "伊方答复与柴油供应缓解"
+      }
+    ],
+    "priority": "今日验证顺序：①20:30 美国9月非农与失业率 ②17:00 欧元区9月CPI初值 ③美伊海峡谈判进展 ④10年期美债能否守住回落"
+  },
+  "calendar": [
+    {
+      "date": "10月2日 周五",
+      "date_iso": "2026-10-02",
+      "event": "17:00 欧元区9月CPI年率初值",
+      "stars": 2
+    },
+    {
+      "date": "10月2日 周五",
+      "date_iso": "2026-10-02",
+      "event": "20:30 美国9月季调后非农就业人口、失业率",
+      "stars": 3
+    },
+    {
+      "date": "10月2日 周五",
+      "date_iso": "2026-10-02",
+      "event": "22:00 美国8月耐用品订单月率终值",
+      "stars": 2
+    },
+    {
+      "date": "10月7日 周三",
+      "date_iso": "2026-10-07",
+      "event": "22:30 美国EIA原油库存10月变动值",
+      "stars": 2
+    }
+  ],
+  "sources": [
+    {
+      "source": "Reuters",
+      "title": "Fed policymakers lean against October rate hike",
+      "published_at": "2026-10-02T08:13:00.883000+08:00",
+      "used_in": [
+        "focus",
+        "macro"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "Equities rebound to close higher as surging Treasury yields recede",
+      "published_at": "2026-10-02T07:30:53.639000+08:00",
+      "used_in": [
+        "focus",
+        "stock_rotation"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "Yields fall after US 10-year hits highest since 2002; US stocks inch up",
+      "published_at": "2026-10-02T05:16:59.404000+08:00",
+      "used_in": [
+        "focus",
+        "macro"
+      ]
+    },
+    {
+      "source": "华尔街见闻·美股直播",
+      "title": "美股10月惊险开门红，欧股下跌，美债收益率暂别多年高位，美元站上102，油金齐涨，埃森哲盘中暴涨超20%。\n\n特朗普：中期选举后或升级对伊打击，美联储不断加息“非常糟糕”。\n\n美国核心PCE通胀率低于预估，两位美联储副主席同日表态，下一步行",
+      "published_at": "2026-10-02T07:30:00+08:00",
+      "used_in": [
+        "focus",
+        "ai_tech",
+        "stock_rotation",
+        "macro",
+        "commodity",
+        "iran"
+      ]
+    },
+    {
+      "source": "富途牛牛",
+      "title": "美股收盘 | 美联储二把手放鸽，三大指数小幅收涨；光通信、存储强势上扬，Lumentum涨超7%，SK海力士涨超5%；美债收益率暂别多年高位，油金齐涨",
+      "published_at": "2026-10-02T07:13:50+08:00",
+      "used_in": [
+        "focus",
+        "ai_tech",
+        "stock_rotation"
+      ]
+    },
+    {
+      "source": "富途牛牛",
+      "title": "美光科技财报电话会议亮点：人工智能驱动内存市场繁荣",
+      "published_at": "2026-10-02T08:02:06+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "Broadcom to lend Anthropic up to $42 billion to lease its chips, filing says",
+      "published_at": "2026-10-02T05:50:02.874000+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "Bloomberg Markets",
+      "title": "Firmus Eyes $30 Billion Valuation in Australian IPO, AFR Reports",
+      "published_at": "2026-10-02T06:30:03+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "富途牛牛",
+      "title": "流式转录新标杆：微软新 AI 模型登场，2.5% 词错误率、0.13 秒延迟夺冠",
+      "published_at": "2026-10-02T07:05:26+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "CNBC Top News",
+      "title": "CNBC AI Forum takeaways: AI costs, security and scale in focus",
+      "published_at": "2026-10-02T06:45:50+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "富途牛牛",
+      "title": "捷普科技盈利电话会议：人工智能热潮推动2027年展望",
+      "published_at": "2026-10-02T08:04:30+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "富途牛牛",
+      "title": "埃森哲财报电话会议亮点：人工智能、利润率与现金流",
+      "published_at": "2026-10-02T08:01:35+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "CNBC Top News",
+      "title": "Software roared back last quarter. Cramer says these stocks can keep climbing",
+      "published_at": "2026-10-02T06:18:01+08:00",
+      "used_in": [
+        "ai_tech",
+        "stock_rotation"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "New Mexico wants Meta to pay up to $40 billion in penalties after data privacy trial",
+      "published_at": "2026-10-02T07:22:19.916000+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "CNBC Top News",
+      "title": "S&P 500 futures are little changed as September jobs report looms: Live updates",
+      "published_at": "2026-10-02T07:13:55+08:00",
+      "used_in": [
+        "stock_rotation"
+      ]
+    },
+    {
+      "source": "金十数据快讯",
+      "title": "日经225指数跌1%。",
+      "published_at": "2026-10-02T08:08:52+08:00",
+      "used_in": [
+        "stock_rotation"
+      ]
+    },
+    {
+      "source": "金十数据快讯",
+      "title": "日经225指数10月2日（周五）开盘下跌549.08点，跌幅0.80%，报68407.64点。",
+      "published_at": "2026-10-02T08:01:43+08:00",
+      "used_in": [
+        "stock_rotation"
+      ]
+    },
+    {
+      "source": "金十数据快讯",
+      "title": "韩国KOSPI指数10月2日（周五）开盘下跌27.83点，跌幅0.4%，报6943.52点。",
+      "published_at": "2026-10-02T08:02:05+08:00",
+      "used_in": [
+        "stock_rotation"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "Nike plans more job cuts to boost sputtering turnaround, forecasts steep revenue drop",
+      "published_at": "2026-10-02T07:03:33.580000+08:00",
+      "used_in": [
+        "stock_rotation"
+      ]
+    },
+    {
+      "source": "CNBC Top News",
+      "title": "Nike shares drop as retailer posts disappointing sales, announces layoffs as part of restructuring",
+      "published_at": "2026-10-02T05:34:44+08:00",
+      "used_in": [
+        "stock_rotation"
+      ]
+    },
+    {
+      "source": "CNBC Top News",
+      "title": "Mattel shares rise after reports of takeover interest from Authentic Brands Group",
+      "published_at": "2026-10-02T05:32:19+08:00",
+      "used_in": [
+        "stock_rotation"
+      ]
+    },
+    {
+      "source": "CNBC Top News",
+      "title": "General Motor Q3 sales drop 5.5%, while Toyota buoyed by EVs, hybrids",
+      "published_at": "2026-10-02T05:25:33+08:00",
+      "used_in": [
+        "stock_rotation"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "US Navy awards RTX's Raytheon $24.4 billion contract for Standard Missile-6 amid stockpile concerns",
+      "published_at": "2026-10-02T05:50:48.061000+08:00",
+      "used_in": [
+        "stock_rotation"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "Boeing white-collar workers approve contract offer, averting strike fears",
+      "published_at": "2026-10-02T07:13:07.072000+08:00",
+      "used_in": [
+        "stock_rotation"
+      ]
+    },
+    {
+      "source": "金十数据快讯",
+      "title": "【莫德纳将纳入纳斯达克100指数】金十数据10月2日讯，莫德纳将在10月9日（周五）开盘前成为纳斯达克100指数的成份股，取代华纳兄弟探索公司。",
+      "published_at": "2026-10-02T08:06:55+08:00",
+      "used_in": [
+        "stock_rotation"
+      ]
+    },
+    {
+      "source": "Bloomberg Markets",
+      "title": "Latest Oil Market News and Analysis for Oct. 2",
+      "published_at": "2026-10-02T06:03:33+08:00",
+      "used_in": [
+        "iran",
+        "commodity"
+      ]
+    },
+    {
+      "source": "金十数据",
+      "title": "霍尔木兹突遭黑手！美军急调第三艘航母，及最多1万名士兵",
+      "published_at": "2026-10-02T07:39:10+08:00",
+      "used_in": [
+        "iran"
+      ]
+    },
+    {
+      "source": "华尔街见闻·美股直播",
+      "title": "伊朗总统佩泽希齐扬当地时间10月1日表示，伊朗不会回避与美国对话。美国总统特朗普表示，有可能在美国中期选举后加大对伊朗的打击力度。佩泽希齐扬说，伊朗从未回避过与美方对话，事实是美方并未寻求与伊朗进行对话。他表示，目前伊朗正在权衡美国对其最新",
+      "published_at": "2026-10-02T07:59:42+08:00",
+      "used_in": [
+        "iran"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "Saudi-led coalition says Houthis attacked power station in Medina",
+      "published_at": "2026-10-02T07:32:52.725000+08:00",
+      "used_in": [
+        "iran"
+      ]
+    },
+    {
+      "source": "Bloomberg Markets",
+      "title": "Getting Oil and Gas Through Hormuz Strait Is Dangerous Job for Ship Captains",
+      "published_at": "2026-10-02T07:01:01+08:00",
+      "used_in": [
+        "iran",
+        "commodity"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "US tells France and Germany to release diesel stocks or face US export ban, sources say",
+      "published_at": "2026-10-02T06:20:17.658000+08:00",
+      "used_in": [
+        "iran"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "US states take steps to curb diesel and gasoline prices",
+      "published_at": "2026-10-02T06:23:37.098000+08:00",
+      "used_in": [
+        "iran"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "EU wants coordinated approach with US on lowering diesel prices, Sefcovic says",
+      "published_at": "2026-10-02T05:33:33.444000+08:00",
+      "used_in": [
+        "iran",
+        "commodity"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "Canada to fast track oil pipeline designed to diversify economy away from US",
+      "published_at": "2026-10-02T06:46:30.579000+08:00",
+      "used_in": [
+        "iran"
+      ]
+    },
+    {
+      "source": "华尔街见闻·美股直播",
+      "title": "美国达拉斯联储主席Logan：相比经济增长，能源价格引发的通胀更令人担忧。\n\n对人工智能将提升劳动生产率持高度乐观态度。\n\nAI建设需求正在推高通胀。",
+      "published_at": "2026-10-02T07:30:40+08:00",
+      "used_in": [
+        "macro"
+      ]
+    },
+    {
+      "source": "富途牛牛",
+      "title": "美联储洛根：美联储至少应该再加息50个基点",
+      "published_at": "2026-10-02T07:24:00+08:00",
+      "used_in": [
+        "macro"
+      ]
+    },
+    {
+      "source": "华尔街见闻·美股直播",
+      "title": "美国达拉斯联储主席Logan：随着经济增长增强，劳动力市场趋于平衡。\n\n通胀正在下降，但并未呈现一路降至2%的趋势。\n\n呼吁将目标利率区间至少上调50个基点。\n\n政策立场一直偏离轨道，美联储公开市场委员会（FOMC）应当加息。\n\n较高的期限",
+      "published_at": "2026-10-02T07:18:29+08:00",
+      "used_in": [
+        "macro"
+      ]
+    },
+    {
+      "source": "富途牛牛",
+      "title": "美联储副主席释放暂停信号，10月会议或维持利率不变",
+      "published_at": "2026-10-02T07:33:05+08:00",
+      "used_in": [
+        "macro"
+      ]
+    },
+    {
+      "source": "CNBC Top News",
+      "title": "Trump could target three Fed governors. Removing them may be harder than it looks",
+      "published_at": "2026-10-02T05:14:49+08:00",
+      "used_in": [
+        "macro"
+      ]
+    },
+    {
+      "source": "Bloomberg Markets",
+      "title": "Swelling Bets Against Treasuries Are Fueling Repo Borrowing Cost",
+      "published_at": "2026-10-02T05:07:39+08:00",
+      "used_in": [
+        "macro"
+      ]
+    },
+    {
+      "source": "金十数据快讯",
+      "title": "日本9月东京核心CPI年率 2.7%，预期2.3%，前值1.80%。",
+      "published_at": "2026-10-02T07:30:05+08:00",
+      "used_in": [
+        "macro"
+      ]
+    },
+    {
+      "source": "金十数据快讯",
+      "title": "【澳洲联储临近加息尾声 澳美债差或转负】金十数据10月2日讯，澳大利亚基准国债收益率有望自一年多来首次低于美国同期限国债收益率，原因是市场对两国货币政策走向的预期出现分化。随着市场越来越押注澳洲联储接近结束加息周期，而美联储未来仍有较大的加",
+      "published_at": "2026-10-02T08:06:33+08:00",
+      "used_in": [
+        "macro"
+      ]
+    },
+    {
+      "source": "富途牛牛",
+      "title": "黄金交易提醒：美联储加息押注暴跌，金价企稳反弹，牛市要重启？市场等待非农决战",
+      "published_at": "2026-10-02T07:51:46+08:00",
+      "used_in": [
+        "commodity"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "Global M&A deal rush fades in third quarter as rising borrowing costs bite",
+      "published_at": "2026-10-02T07:21:41.964000+08:00",
+      "used_in": [
+        "stock_rotation"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "TSX hits 10-week low as mining shares fall",
+      "published_at": "2026-10-02T05:00:37.520000+08:00",
+      "used_in": [
+        "stock_rotation"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "Bridgewater's flagship macro fund posts double-digit gains this year, sources say",
+      "published_at": "2026-10-02T05:08:29.846000+08:00",
+      "used_in": [
+        "stock_rotation"
+      ]
+    }
+  ],
+  "sections": [
+    {
+      "id": "focus",
+      "title": "头号焦点 | 长端利率冲高回落，AI上游再次独自扛住压力",
+      "bullets": [
+        "[[c:10年期美债收益率盘中触及2002年以来最高]]后掉头回落，美股10月首个交易日惊险收涨：标普500[[red:涨0.19%]]报7666.45点，纳指与道指均小涨0.04%，VIX收于16.39。盘中分水岭在于9月ISM制造业指数虽仍在扩张、却连降两月且成本压力骤升，标普一度转跌、长债承压；随后核心PCE低于预估与美联储副主席的暂停信号发酵，收益率从多年高位回撤，股市收复失地。目前10年期收益率在5.25%附近，较前收盘[[green:仍高1.5个基点]]，回落更像喘息而非逆转。欧股当日下跌，美元站上102，跨资产的风险偏好修复仅限于美股科技。",
+        "[[c:科技内部的强弱分化]]才是这次反弹的看点：费城半导体[[red:大涨1.59%]]报12829点，远强于大盘，美光涨3.03%至1097.39美元，英伟达涨1.09%，AMD涨0.65%，苹果却[[green:跌0.81%]]、微软基本持平。光通信与存储强势上扬，Lumentum涨超7%，SK海力士涨超5%，与美光财报电话会议上“AI驱动内存市场繁荣”的定调相互印证。资金没有平均撒向大型科技股，而是集中在订单与价格最能被验证的算力上游，市场广度收窄、向盈利确定性抱团的格局延续，七巨头内部同样出现硬件强、终端弱的分化。",
+        "[[c:课代表框架]]：长端利率站上5.2%以上，压制的是多数行业的估值，但对盈利增速足够高的AI上游影响有限，这正是利率创高当日半导体仍能领涨的原因，科技回调属交易层面的估值消化，而非基本面逆转。需要警惕两种失效情形：一是今晚20:30的9月非农[[green:明显超预期]]，重燃10月加息押注、把10年期推回高位；二是美伊对峙在中期选举后升级，油价走高传导至通胀预期。验证点在于收益率能否在非农后[[c:守住回落态势]]，以及半导体能否在利率反弹时继续跑赢大盘。"
+      ],
+      "note": "利率冲高回落给科技喘息，费半领涨显示资金继续押注AI上游；今晚非农决定长端利率是喘息还是再度冲顶。"
+    },
+    {
+      "id": "ai_tech",
+      "title": "AI·芯片·科技 | 存储与光通信领涨，算力融资规模再上台阶",
+      "bullets": [
+        "[[c:存储是当日最强的验证信号]]：美光财报电话会议的核心叙事是人工智能驱动内存市场繁荣，周四股价[[red:上涨3.03%]]，SK海力士同步涨超5%，美韩存储龙头形成共振。存储是AI服务器中价格弹性最大的环节之一，高带宽内存与数据中心需求越旺，价格与订单能见度越高。课代表视角下，存储走强说明市场仍在为AI上游的盈利兑现买单，而不是单纯交易估值；后续要跟踪存储价格能否延续上行，以及[[c:行业扩产节奏]]是否过快；只要价格与订单同步向上，存储股的回调就更多是交易层面的筹码消化。",
+        "[[c:博通拟向Anthropic提供最高420亿美元贷款]]，用于租用其芯片，算力竞争从“卖芯片”推进到“为客户融资锁定算力”的阶段。同一天，数据中心运营商Firmus寻求以437亿澳元（约303亿美元）估值在澳大利亚IPO，资本仍在加速涌入算力基础设施。课代表框架：供应商融资能锁定定制芯片和网络设备的长期订单，提升上游出货能见度，但也意味着需求端部分依赖[[green:杠杆与外部资本]]，在长端利率5.2%以上的环境里，融资成本是必须盯住的约束，一旦利率继续上行，杠杆扩张最快的算力项目会最先受到估值与融资双重考验。",
+        "[[c:AI前沿与应用落地]]持续推进：微软推出新的流式转录AI模型，以[[red:2.5%词错误率]]和0.13秒延迟刷新标杆；CNBC AI论坛聚焦企业AI的成本、安全与规模化；埃森哲盘中[[red:暴涨超20%]]，其财报电话会议聚焦人工智能、利润率与现金流，捷普科技也表示AI热潮推动其2027年展望。模型更快更便宜，IT服务与电子制造订单被AI拉动，说明推理需求正从模型公司外溢到整条产业链，这是算力需求持续扩张的底层逻辑，也是上游设备、存储与光通信订单能见度不断拉长的原因。",
+        "[[c:软硬件轮动与监管风险]]并存：上季度软件股从AI冲击引发的抛售中强势反弹，芯片股则在上半年大涨后降温，CNBC主持人Cramer认为软件股仍可继续攀升。但周四盘面显示，利率压力下资金仍优先回到[[c:光通信与存储等卖铲子环节]]。监管面，新墨西哥州在数据隐私审判后要求Meta支付[[green:最高400亿美元罚款]]，大型平台合规成本上升；这类风险主要落在应用层，对设备、材料、存储等上游订单的影响有限，课代表仍把卖铲子环节视为AI周期里确定性最高的位置。"
+      ],
+      "note": "存储、光通信与算力融资同步验证AI上游景气；主要风险是高利率下的融资成本与平台监管。"
+    },
+    {
+      "id": "stock_rotation",
+      "title": "资金轮动 | 指数窄幅收涨，资金在半导体与确定订单间抱团",
+      "bullets": [
+        "[[c:市场广度依旧偏窄]]：三大指数涨幅均不足0.2%，费半却大涨1.59%，资金高度集中于半导体；主要股指本周仍朝周线下跌的方向运行，美股期货在非农前基本持平。亚洲早盘延续谨慎，日经225指数开盘[[green:跌0.80%]]后跌幅扩大至1%，韩国KOSPI开盘跌0.4%，澳洲ASX200则涨0.55%，油价上涨重燃通胀担忧是亚股承压的主因。高利率下资金只愿押注盈利最确定的AI上游，这是抱团而非全面的风险偏好修复。",
+        "[[c:非科技板块的独立催化]]分化明显：耐克宣布进一步裁员推进转型并预计营收大幅下滑，股价[[green:应声下跌]]；美泰因Authentic Brands Group表达收购兴趣而上涨；通用汽车三季度销量下滑5.5%，电动车销量全线走弱。莫德纳将于10月9日开盘前取代华纳兄弟探索纳入纳斯达克100指数，雷神获美国海军244亿美元标准-6导弹合同，波音白领工会批准新合同、避免罢工。消费与汽车疲弱、国防订单走强，资金在科技以外更青睐有确定订单的方向。",
+        "[[c:高利率正在改变资本市场节奏]]：全球并购热潮在三季度明显降温，借贷成本上升开始侵蚀交易意愿；加拿大TSX指数因矿业股下跌触及十周低位；与此同时，桥水旗舰宏观基金今年以来录得[[red:两位数收益]]，宏观策略在利率剧烈波动中占优。课代表视角：资金成本上行压制并购活动与周期资源股，而盈利能够自我造血的AI上游受影响较小，这正是资金持续向半导体集中的背景，也意味着利率一旦回落，轮动范围才有望扩散。"
+      ],
+      "note": "资金集中在半导体与国防等确定订单方向，消费与汽车承压，轮动级别仍属窄幅抱团。"
+    },
+    {
+      "id": "iran",
+      "title": "中东地缘 | 增兵信号与对话意愿并存，油价重拾风险溢价",
+      "bullets": [
+        "[[c:军事层面出现升级信号]]：美方考虑再向中东派遣航母战斗群，涉及第三艘航母及最多1万名士兵的调动，特朗普表示有可能在中期选举后加大对伊朗的打击力度；沙特领导的联军称胡塞武装袭击了麦地那一座发电站。外交层面，伊朗总统佩泽希齐扬表示伊朗不会回避与美国对话，伊方正在权衡美方对其重开霍尔木兹海峡最新提议的回应。对话意愿仍在，但[[green:兵力调动的信号]]分量更重，二者不能等量齐观。",
+        "[[c:现实供应并未中断]]：霍尔木兹海峡的油气运输仍面临伊朗无人机与导弹威胁，但来自中东的流量正在[[red:回升]]，航运在风险中恢复。成品油端压力却在加大：美国要求法国和德国释放柴油库存，否则面临美国出口禁令；美国多个州采取措施抑制柴油和汽油价格，欧盟希望与美方协调降低柴油价格；加拿大则将加速推进一条旨在减少对美依赖的输油管道。成品油紧张而非原油断供，是当前能源风险的主要形态。",
+        "[[c:传导链]]：地缘对资产的影响沿着“油价→通胀→利率”展开。布油站上102美元，若美伊对峙在中选后升级，油价抬升会推高通胀预期、强化加息押注，同时压制成长股估值与黄金；反之，若双方就海峡重开达成框架，油价回落将带动通胀预期与利率风险[[red:一同降温]]，对科技和黄金都是正面因素。升级条件看增兵部署与对伊打击表态是否落地，缓和条件看伊方对美方回应的正式答复。"
+      ],
+      "note": "增兵信号与对话意愿并存，中东流量回升但柴油偏紧；关键看伊方答复与中选后美方动作。"
+    },
+    {
+      "id": "macro",
+      "title": "宏观·利率 | 加息押注降温，但洛根喊出50基点、长端仍贴近高位",
+      "bullets": [
+        "[[c:利率定价]]：10年期美债收益率触及2002年以来最高后回落，目前在5.25%附近，美元指数站上102。核心PCE通胀率低于预估，两位美联储副主席同日表态下一步行动需要更多时间，美联储决策者倾向于反对10月加息，10月加息预期[[red:进一步降温]]。但做空美债的押注持续膨胀，正在推高回购融资成本，美国融资市场可能因此受到扰动；法国预算案引发财政担忧、欧元区国债风险溢价飙升，长端利率的压力并未解除。",
+        "[[c:鹰派声音与数据分歧]]：达拉斯联储主席洛根呼吁将目标利率区间[[green:至少上调50个基点]]，认为政策立场一直偏离轨道，通胀虽在下降但未呈现一路降至2%的趋势，能源价格引发的通胀比增长更令人担忧，并指出AI建设需求正在推高通胀。数据端，9月企业裁员人数创四年同期新低，招聘意愿却降至十五年同期低谷。特朗普称美联储不断加息“非常糟糕”，并可能寻求解除鲍威尔、库克和巴尔的职务，但法院裁决与漫长诉讼可能限制其行动。",
+        "[[c:美联储三种情景]]：基准情景是10月暂停加息、年内仍保留再加一次的可能，长端在5.2%上方震荡；偏好情景是今晚非农与后续通胀数据降温、油价回落，加息周期接近尾声，[[red:科技与黄金同步受益]]；偏坏情景是非农强劲叠加油价上行，10月重启加息甚至出现洛根式的50基点，10年期再度冲高。外部也在分化：东京9月核心CPI升至2.7%，高于预期的2.3%，日本央行加息压力上升；澳美10年期利差收窄至约12个基点，策略师认为澳债相对美债的强势有望延续至2026年底。"
+      ],
+      "note": "加息押注降温但鹰派未退，长端贴近高位；今晚非农决定10月是暂停还是重启加息。"
+    },
+    {
+      "id": "commodity",
+      "title": "大宗·外汇 | 金价受困高利率，油价与美元高位共振",
+      "bullets": [
+        "**黄金**：现货黄金报4168.86美元/盎司，[[green:跌0.20%]]，此前美股时段油金齐涨，加息押注降温一度令金价企稳反弹。课代表框架：黄金当前由利率预期主导，10年期美债收益率在5.25%附近，持有不生息资产的机会成本处于高位，加息预期每抬升一次都是直接压力；地缘只能经由油价推高通胀、再影响利率的链条间接作用于金价。黄金更适合作为对冲长期风险的配置工具，右侧行情要等待[[c:加息预期实质性回落]]的确认。",
+        "**布伦特原油期货+美元指数**：布伦特原油期货报102.61美元，[[red:涨0.29%]]，在连续两日上涨后企稳，美方考虑增派航母令能源流动的恢复面临变数；美元指数报102.04，与前收盘基本持平。油价与美元同处高位，意味着输入性通胀压力与美国相对高利率同时存在：油价越高，通胀预期越难回落，美联储越难松口，美元与实际利率的支撑就越强，对黄金构成双重压制。缓和信号在于中东流量回升与欧美协调平抑柴油价格能否压低油价。"
+      ],
+      "note": "金价被高利率压制，油价与美元高位共振，通胀与利率链条仍是金油美元的共同主线。"
+    }
+  ]
+}
