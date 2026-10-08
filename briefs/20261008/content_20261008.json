@@ -1,0 +1,475 @@
+{
+  "date_yyyymmdd": "20261008",
+  "date_cn": "2026年10月8日（周四）",
+  "as_of": "2026-10-08T08:21:02+08:00",
+  "main_title": "三星利润破百万亿韩元·费半跌1.15%<br>美联储纪要多数预计年内再加息·布油101美元",
+  "alert_time": "08:21",
+  "alert": "**过去24小时核心变化**：[[c:三星电子第三季度营业利润预计首次突破100万亿韩元]]，AI存储热潮推动利润同比增长近九倍，AMD也表态AI芯片需求强劲并将大幅扩产；但美股从纪录高位回落，费城半导体[[green:下跌1.15%]]，30年期美债收益率升至2002年以来新高。美联储纪要显示多数官员预计年内还要加息，美方对伊朗打击预案升温推动布油[[red:站上101美元]]，黄金徘徊在九周低位。当天交易结构是：AI盈利继续兑现，利率与油价压制估值。",
+  "qdii_date_label": "估算基于2026年10月7日（周三）最近交易日收盘",
+  "logic_chain": {
+    "paths": [
+      {
+        "name": "路径A（科技主线·存储利润爆发）",
+        "color": "#534AB7",
+        "body": "三星利润破百万亿韩元、AMD扩产<br>存储与算力需求仍在加速兑现",
+        "sub": "验证：三星正式财报指引与美光走势"
+      },
+      {
+        "name": "路径B（宏观逆风·长端利率新高）",
+        "color": "#A32D2D",
+        "body": "纪要预示年内再加息、30年期收益率新高<br>折现率上行压制成长股与黄金",
+        "sub": "缓冲：标售需求强劲，关注9月CPI"
+      },
+      {
+        "name": "路径C（独立变量·伊朗与油运）",
+        "color": "#0F6E56",
+        "body": "选前打击预案、红海战事、油运暴涨<br>布油站上百元抬升通胀预期",
+        "sub": "验证：方案是否落地与海峡通行"
+      }
+    ],
+    "priority": "今日验证顺序：①今晚初请失业金人数 ②三星与美光后续指引 ③美伊打击预案进展 ④10年期美债收益率能否回落"
+  },
+  "calendar": [
+    {
+      "date": "10月8日 周四",
+      "date_iso": "2026-10-08",
+      "event": "20:30 美国至10月3日当周初请失业金人数",
+      "stars": 3
+    },
+    {
+      "date": "10月9日 周五",
+      "date_iso": "2026-10-09",
+      "event": "22:00 美国10月密歇根大学消费者信心指数初值",
+      "stars": 2
+    },
+    {
+      "date": "10月14日 周三",
+      "date_iso": "2026-10-14",
+      "event": "09:30 中国9月CPI、PPI",
+      "stars": 3
+    },
+    {
+      "date": "10月14日 周三",
+      "date_iso": "2026-10-14",
+      "event": "20:30 美国9月CPI",
+      "stars": 3
+    }
+  ],
+  "sections": [
+    {
+      "id": "focus",
+      "title": "头号焦点 | 三星利润创纪录撞上美债高息，AI盈利与估值压力正面交锋",
+      "bullets": [
+        "[[c:三星电子第三季度营业利润预计首次突破100万亿韩元]]，折合约800亿美元，同比增幅接近九倍，AI存储景气是直接驱动力。但此前一个交易日并不友好：周三标普500收于7801.77点，[[green:下跌0.22%]]，纳指同样下跌0.22%，道指下跌0.66%，费城半导体指数[[green:下跌1.15%]]，美股从纪录高位回落，美债收益率攀升是压制估值的核心原因。周四早盘三星初步业绩公布后上涨0.3%。课代表框架下，这组反差说明市场此刻交易的不是AI需求真假，而是在5%以上的长端利率面前，愿意为盈利增长支付多高的估值，[[c:强劲财报能做的是托底而不是拉升]]。",
+        "[[c:同一晚的产业信号几乎都指向需求端]]：AMD首席执行官苏姿丰表示AI芯片需求强劲，公司将持续大幅扩充产能；美光获得华尔街最高目标价后走强；Penguin Solutions季度业绩创历史新高；LG新能源利润超预期一倍以上。把存储、计算芯片、服务器方案和储能电池放在一起看，[[red:AI资本开支正在从芯片外溢到电力与储能环节]]，这与上游卖铲子的逻辑一致。反面在于，费半当天跌幅明显超过大盘，市场上关于AI热潮能否持续的警告再度升温，说明好消息已经被部分计入价格，[[green:利好兑现后的获利了结]]是短期最现实的压力。",
+        "[[c:课代表框架：盈利与利率的赛跑]]。30年期美债收益率升至2002年以来新高，10年期收益率在触及24年高位后回落；美联储纪要显示多数官员预计年内还要加息、同时暗示10月不急，意味着利率压力是持续的慢变量而不是突发冲击。在这种环境里，能用盈利增速消化估值抬升的主要是AI产业链，信用敏感型板块首当其冲。验证条件很清晰：存储与算力龙头的正式财报若继续上修指引，AI盈利一侧继续加分；若10年期收益率重新站上更高水平、布油同时维持在100美元上方，[[green:估值压缩会从小盘股蔓延到科技权重]]。"
+      ],
+      "note": "存储利润爆发验证AI上游景气，但长端利率创多年新高，短期是盈利托底与估值承压的拉锯，方向未改、节奏放缓。"
+    },
+    {
+      "id": "ai_tech",
+      "title": "AI·芯片·科技 | 存储利润爆发与产能扩张共振，融资与估值成为新考题",
+      "bullets": [
+        "[[c:存储是这轮AI周期中盈利弹性最大的环节]]。三星电子第三季度营业利润预计首次突破100万亿韩元，同比增长接近九倍，AI存储热潮推升芯片业务盈利；同一天美光获得华尔街最高目标价，股价逆势走强。存储价格与出货同时上行，意味着高带宽内存和高端DRAM的供需缺口仍未收敛，[[red:上游卖铲子环节的业绩兑现度最高]]。需要注意，存储是周期性最强的子行业，利润增速达到数倍时市场会开始担心扩产后的供给释放；三星正式财报中的产能与资本开支指引，将是判断[[c:景气能否延续到明年]]的关键验证。",
+        "[[c:计算芯片端的需求表述同样强硬]]：苏姿丰表示AI芯片需求强劲，AMD将持续大幅扩充产能。终端侧，微软发布售价2599美元、搭载英伟达AI芯片的Surface Laptop Ultra，并推出个人助手Scout，与苹果正面竞争。这条线的意义在于AI正从数据中心向个人终端渗透，[[red:推理需求的应用场景在持续扩容]]。机构层面，知名科技分析师艾夫斯发布2027年科技股首选名单，英伟达、微软、苹果等五只股票入选；[[c:中信建投10月AI月报认为模型迭代与投入不减]]，Agent商业化持续兑现。反方信号是高通与Arm的诉讼正式开庭，潜在巨额赔偿可能扰动[[green:移动端芯片授权格局]]。",
+        "[[c:基础设施端的扩张在加速，但融资成本同步抬升]]。数据中心运营商Applied Digital营收大幅增长，但因AI投资扩大，亏损同步扩大；Wolfspeed获得美国国防部15亿美元有条件贷款承诺；LG新能源受益于储能系统需求激增，[[red:电力与储能正在成为算力扩张的新增量]]。在长端利率处于二十多年高位的环境中，重资产的算力基础设施对融资条件极其敏感，Applied Digital营收与亏损同时扩大，正是[[green:高资本开支叠加高利率]]的典型写照。课代表框架看，这一环节的验证点在于订单能否转化为稳定现金流，而不是单纯的营收增速。",
+        "[[c:一级市场与政策生态释放的信号偏积极]]。Anthropic计划在感恩节前登陆纳斯达克，但也有偏空的咨询机构称其为年内[[green:最离谱的IPO]]并建议回避，估值分歧本身说明AI资产定价已进入深水区。政策端，特朗普将于周四在白宫科学峰会上向马斯克、戴尔、纳德拉等科技企业高管颁发奖章。国内方面，中信建投认为国内AI板块整体趋势上行，粤芯半导体创业板IPO落地，[[red:半导体材料与制造环节的资本化在提速]]。风险在于大型AI公司密集上市会分流二级市场资金，需观察新股定价对存量科技股估值的影响。"
+      ],
+      "note": "存储与算力需求继续上修，AI正向终端和储能延伸；高利率抬升基础设施融资成本，大型IPO带来估值与资金分流考验。"
+    },
+    {
+      "id": "stock_rotation",
+      "title": "资金轮动 | 高息压力下利率敏感板块承压，资金向盈利确定性集中",
+      "bullets": [
+        "[[c:这不是全面撤退，而是一次结构性分化]]。道指下跌0.66%，跌幅明显大于标普500和纳指的0.22%，费半下跌1.15%，而恐慌指数VIX仅微升至15.08，说明市场在降风险但并未恐慌。加拿大多伦多股指录得四个月来最大跌幅，亚洲股市周四跟随回落。克莱默指出，高利率正把市场一分为二，[[green:信用敏感型板块承压]]，而AI公司基本不受影响。这与课代表一贯的逻辑一致：在长债收益率5%以上的环境中，[[c:只有盈利增速足够高的资产]]才能抵御折现率上行，资金向少数龙头集中，指数表现与个股广度的背离还会延续。",
+        "[[c:科技以外的独立催化集中在消费与跨境资金流]]。李维斯因关税退款和假日季需求上调全年利润指引，业绩超出预期，但销售展望不那么乐观，说明[[green:利润改善部分来自一次性因素]]；UPS计划为假日季招聘10万名临时工，显示企业对年末消费旺季仍有准备。资金流方面，截至10月2日当周外资买进日股21919亿日元，前值为卖出3542亿日元，[[red:跨境股票资金明显回流]]。港股方面，恒生科技指数编制规则12月迎来首次大调整，取消行业要求，成分股由30只扩至50只。整体看这些催化级别有限，难以替代AI主线的资金吸引力。"
+      ],
+      "note": "道指与费半领跌、VIX平稳，属于高息下的结构性降温；资金继续向盈利确定的AI龙头集中，消费催化级别有限。"
+    },
+    {
+      "id": "iran",
+      "title": "中东地缘 | 打击预案与红海战火同步升温，油运成本飙升验证供给紧张",
+      "bullets": [
+        "[[c:最实质的进展是美方军事选项重新摆上桌面]]。白宫已要求五角大楼拟定可在中期选举前执行的对伊朗打击方案，美军奉命准备重启对伊朗的重大行动，特朗普正在权衡时机；霍尔木兹海峡也出现新的紧张局势。需要区分的是，目前仍停留在制定方案和权衡时机阶段，[[c:尚未进入已执行的军事行动]]，但市场已经开始为选前出手的概率定价，布伦特原油期货随之走高至101.12美元，[[red:上涨0.92%]]。对股市而言，这意味着中期选举前的地缘不确定性不会消退，消息面大概率继续反复，仓位管理比方向判断更重要。",
+        "[[c:现实供应链的紧张程度已经体现在运价上]]。一艘从美国墨西哥湾沿岸开往中国的超大型油轮租金达到7600万美元，是战前水平的10倍。红海方向同样升温：沙特机场遇袭造成3人死亡，也门战事升级，沙特支持的也门政府军宣称在曼德海峡附近对胡塞武装取得地面进展，[[green:两大航运咽喉同时承压]]。叠加热带风暴，雪佛龙已对其在墨西哥湾运营的四处设施启动停产程序。中信证券认为油运周期重塑强化，同时提示关注G7释放原油和柴油战略库存的效果。供给扰动从预期走向运价和产量，是油价站稳百元的现实基础。",
+        "[[c:传导链：油价→通胀预期→利率→黄金与成长股]]。布油站上100美元上方，直接抬升通胀预期，这也是30年期美债收益率创2002年以来新高的重要背景；黄金在霍尔木兹紧张升温的情况下反而徘徊在九周低位附近，说明地缘影响黄金的主导通道是[[green:通过油价推高加息预期]]，而不是简单的避险买盘。升级条件是选前打击方案落地或海峡通行再度受阻，届时油价、收益率与美元可能同步走高，成长股与黄金同时承压；缓和条件是谈判重启并出现可执行的通航安排，油价回落会同时缓解利率与估值压力，[[red:科技和黄金将同时受益]]。"
+      ],
+      "note": "打击预案仍在纸面，但油运暴涨与风暴减产已是真实约束；油价是地缘传导到利率、黄金和科技估值的总开关。"
+    },
+    {
+      "id": "macro",
+      "title": "宏观·利率 | 美联储纪要定调年内仍有加息，长债高位迎来需求测试",
+      "bullets": [
+        "[[c:长端利率正在测试市场承受力]]。30年期美债收益率升至2002年以来新高，10年期收益率触及24年高位后回落，最新报5.29%，较前收盘仅上行0.7个基点。回落来自一场稳健的10年期国债标售：认购倍数达2.77，[[red:创2016年以来新高]]，海外需求接近纪录高位，长债抛压有所缓和，缓解了市场对需求不足的担忧。美元指数报102.26，基本持平。课代表框架看，标售结果证明在5%以上的收益率水平，配置型买盘愿意入场，[[c:长端利率的上行斜率可能放缓]]，但只要油价维持百元，通胀预期就难以回落。",
+        "[[c:9月会议纪要给出了偏鹰的底色]]：全体19名决策者都支持9月加息，但理由并不一致，多数官员预计年内还会再加息，同时暗示10月不必急于行动；部分官员还希望为可能出现的市场压力做好准备。这意味着加息周期尚未结束，只是节奏可以等待数据。以此设定三种情景：基准情景是10月按兵不动、年内再加息一次；偏好情景是油价回落、通胀数据降温，[[red:年内加息预期被逐步挤出]]；偏坏情景是布油长期停留在100美元上方，通胀预期持续抬升，[[green:10月就重启加息]]。英国房市同样受到加息担忧拖累。",
+        "[[c:前瞻窗口：本周看就业，下周看通胀]]。今晚20:30美国公布截至10月3日当周初请失业金人数，下周三20:30公布美国9月CPI。美国9月CPI是检验加息节奏的核心数据：若通胀超预期，叠加百元油价，[[green:10月加息概率会重新升温]]，科技估值与黄金同时承压；若低于预期，收益率回落会先修复成长股估值，黄金也将获得喘息空间。中国方面，9月外汇储备环比下降1.1%，央行连续第23个月增持黄金且9月购金节奏进一步加快；中信证券预计年底美元兑人民币或在6.60至6.70之间，[[red:汇率约束减弱为国内货币宽松留出空间]]。"
+      ],
+      "note": "加息周期未完、10月不急是基准；标售需求强劲为长端降温提供缓冲，美国9月CPI是证实或证伪的关键。"
+    },
+    {
+      "id": "commodity",
+      "title": "大宗·外汇 | 百元油价压制黄金，央行购金提供长期支撑",
+      "bullets": [
+        "**黄金**：现货黄金报4107.94美元/盎司，[[green:下跌0.07%]]，徘徊在九周低位附近。压制来自两条线：霍尔木兹海峡紧张升温加剧战争推动的通胀担忧，年内再加息预期抬高了黄金的持有成本。但支撑同样清晰，中国央行已连续23个月增持黄金，9月购金节奏进一步加快，[[red:官方部门的长期配置需求没有中断]]。课代表框架看，黄金当前由利率预期主导，地缘只能通过油价和通胀间接影响金价；价格进入价值区间后更适合分批布局，而不是追涨杀跌。右侧信号的验证条件是美国9月CPI降温、10年期美债收益率回落，届时黄金有望[[c:摆脱加息预期的压制]]。",
+        "**布伦特原油期货+美元指数**：布伦特原油期货报101.12美元，[[red:上涨0.92%]]，美国可能在中期选举前打击伊朗、霍尔木兹紧张以及热带风暴导致部分美国产量关停，共同推升油价，美股交易时段曾先涨后跌。超大型油轮运价飙升至战前10倍，说明真实供给约束仍在。美元指数报102.26，[[green:微跌0.02%]]，基本持平。课代表框架看，油价是当前通胀与利率链条的源头，[[c:百元油价持续越久，加息预期就越难消退]]，黄金和成长股的估值压力也越大；美元横盘意味着利率冲击主要通过收益率而非汇率传导，后续要观察G7释放战略库存能否压低油价。"
+      ],
+      "note": "黄金受加息预期压制但央行买盘托底，布油站稳百元是通胀与利率的源头，美元横盘未提供额外方向。"
+    }
+  ],
+  "sources": [
+    {
+      "source": "CNBC Top News",
+      "title": "Samsung forecasts record third-quarter profit of $80 billion on the back of AI boom",
+      "published_at": "2026-10-08T06:58:05+08:00",
+      "used_in": [
+        "focus",
+        "ai_tech",
+        "commodity"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "Samsung Q3 profit jumps nearly nine-fold as AI memory boom lifts chip earnings",
+      "published_at": "2026-10-08T07:12:46.765000+08:00",
+      "used_in": [
+        "focus",
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "Wall Street ends lower, off record highs, as Treasury yields climb",
+      "published_at": "2026-10-08T07:14:18.599000+08:00",
+      "used_in": [
+        "focus",
+        "stock_rotation"
+      ]
+    },
+    {
+      "source": "CNBC Top News",
+      "title": "Thursday's big stock stories: What’s likely to move the market in the next trading session",
+      "published_at": "2026-10-08T07:04:15+08:00",
+      "used_in": [
+        "focus"
+      ]
+    },
+    {
+      "source": "Bloomberg Markets",
+      "title": "Micron Rallies as AI Tailwinds Drive a Street-High Price Target | Closing Bell",
+      "published_at": "2026-10-08T04:24:28+08:00",
+      "used_in": [
+        "focus",
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "Bloomberg Markets",
+      "title": "LG Energy Profit Beats Estimates on Energy-Storage System Demand",
+      "published_at": "2026-10-08T07:58:55+08:00",
+      "used_in": [
+        "focus",
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "CNBC Top News",
+      "title": "Cramer says higher rates are splitting the market in two — and AI stocks have a big advantage",
+      "published_at": "2026-10-08T06:22:32+08:00",
+      "used_in": [
+        "focus",
+        "stock_rotation"
+      ]
+    },
+    {
+      "source": "CNBC Top News",
+      "title": "10-year Treasury yield backs off from 24-year high after solid bond auction eases demand fears",
+      "published_at": "2026-10-08T04:09:59+08:00",
+      "used_in": [
+        "focus",
+        "macro"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "Fed policymakers divided over rate-hike logic in September, minutes show",
+      "published_at": "2026-10-08T05:33:31.467000+08:00",
+      "used_in": [
+        "focus",
+        "macro"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "Fed minutes show some officials want to prepare for market stress",
+      "published_at": "2026-10-08T05:34:27.702000+08:00",
+      "used_in": [
+        "macro"
+      ]
+    },
+    {
+      "source": "华尔街见闻·美股直播",
+      "title": "标普500、纳指自纪录高位回落，有关AI热潮能否持续的警告再度升温；30年期美债收益率创2002年新高；原油先涨后跌。",
+      "published_at": "2026-10-08T07:38:05+08:00",
+      "used_in": [
+        "focus",
+        "macro",
+        "commodity",
+        "iran",
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "富途牛牛",
+      "title": "AMD CEO苏姿丰：AI芯片需求强劲 将持续大幅扩充产能",
+      "published_at": "2026-10-08T07:55:14+08:00",
+      "used_in": [
+        "focus",
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "富途牛牛",
+      "title": "Penguin Solutions借力人工智能浪潮，季度业绩创历史新高",
+      "published_at": "2026-10-08T08:02:15+08:00",
+      "used_in": [
+        "focus",
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "金十数据快讯",
+      "title": "韩国KOSPI指数10月8日（周四）开盘上涨3.65点，涨幅0.05%，报6807.55点。三星电子公布初步业绩后上涨0.3%。",
+      "published_at": "2026-10-08T08:01:18+08:00",
+      "used_in": [
+        "focus"
+      ]
+    },
+    {
+      "source": "CNBC Top News",
+      "title": "Microsoft to sell $2,599 Surface Laptop Ultra containing Nvidia AI chip",
+      "published_at": "2026-10-08T04:26:13+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "富途牛牛",
+      "title": "微软携手英伟达发布Surface旗舰新机，同步推出“龙虾”个人助手Scout",
+      "published_at": "2026-10-08T07:53:47+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "富途牛牛",
+      "title": "Dan Ives发布2027年科技股首选！英伟达、微软、苹果等五股上榜，特斯拉获评“颠覆性科技首选”",
+      "published_at": "2026-10-08T07:49:45+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "富途牛牛",
+      "title": "中信建投10月AI月报：模型迭代与投入不减 Agent商业化持续兑现",
+      "published_at": "2026-10-08T07:35:41+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "Qualcomm and Arm kick off trial, potential for huge damages in focus",
+      "published_at": "2026-10-08T05:50:45.251000+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "Applied Digital's revenue soars, loss widens on growing AI investments",
+      "published_at": "2026-10-08T05:23:22.401000+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "Wolfspeed secures $1.5 billion conditional loan commitment from US defense department",
+      "published_at": "2026-10-08T05:09:43.854000+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "CNBC Top News",
+      "title": "Anthropic will be 'most ridiculous IPO' of year, analyst says",
+      "published_at": "2026-10-08T06:29:41+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "CNBC Top News",
+      "title": "Trump awarding medals to Musk, Dell, Nadella and other tech execs at science summit",
+      "published_at": "2026-10-08T06:32:14+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "富途牛牛",
+      "title": "中信建投：国内AI板块整体趋势上行",
+      "published_at": "2026-10-08T07:39:55+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "富途牛牛",
+      "title": "芯闻 | 粤芯半导体创业板IPO落地",
+      "published_at": "2026-10-08T08:00:00+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "富途牛牛",
+      "title": "芯闻 | 力诺药包递表港交所，从药玻龙头切入半导体玻璃基片",
+      "published_at": "2026-10-08T08:00:00+08:00",
+      "used_in": [
+        "ai_tech"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "TSX posts steepest decline in four months as bond yields climb",
+      "published_at": "2026-10-08T04:40:03.267000+08:00",
+      "used_in": [
+        "stock_rotation"
+      ]
+    },
+    {
+      "source": "Bloomberg Markets",
+      "title": "Asian Stocks Drop on Inflation Concerns, Oil Gains: Markets Wrap",
+      "published_at": "2026-10-08T06:03:17+08:00",
+      "used_in": [
+        "stock_rotation"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "Levi Strauss lifts annual profit outlook on tariff refunds, holiday demand",
+      "published_at": "2026-10-08T06:10:19.485000+08:00",
+      "used_in": [
+        "stock_rotation"
+      ]
+    },
+    {
+      "source": "CNBC Top News",
+      "title": "Levi Strauss hikes profit guidance after tariff refunds, but its sales outlook is less optimistic",
+      "published_at": "2026-10-08T05:31:40+08:00",
+      "used_in": [
+        "stock_rotation"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "UPS to hire 100,000 temporary workers for holiday season",
+      "published_at": "2026-10-08T04:17:10.115000+08:00",
+      "used_in": [
+        "stock_rotation"
+      ]
+    },
+    {
+      "source": "金十数据快讯",
+      "title": "日本至10月2日当周外资买进日股 21919亿日元，前值由-3620亿日元修正为-3542亿日元。",
+      "published_at": "2026-10-08T07:50:02+08:00",
+      "used_in": [
+        "stock_rotation"
+      ]
+    },
+    {
+      "source": "Bloomberg Markets",
+      "title": "Latest Oil Market News and Analysis for DATE",
+      "published_at": "2026-10-08T06:02:55+08:00",
+      "used_in": [
+        "iran",
+        "commodity"
+      ]
+    },
+    {
+      "source": "金十数据",
+      "title": "美军奉命准备重启对伊朗重大行动：特朗普权衡时机，行动或赶在美以选举前",
+      "published_at": "2026-10-08T07:56:12+08:00",
+      "used_in": [
+        "iran"
+      ]
+    },
+    {
+      "source": "Bloomberg Markets",
+      "title": "Gold Near Nine-Week Low on Prospects for Rate Hike by Year-End",
+      "published_at": "2026-10-08T07:37:27+08:00",
+      "used_in": [
+        "iran",
+        "commodity"
+      ]
+    },
+    {
+      "source": "CNBC Top News",
+      "title": "Supertanker chartered from Gulf Coast to China for $76 million, 10 times higher than pre-war level",
+      "published_at": "2026-10-08T04:33:34+08:00",
+      "used_in": [
+        "iran",
+        "commodity"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "Attacks on Saudi airports kill three people, as fighting escalates in Yemen",
+      "published_at": "2026-10-08T06:02:20.392000+08:00",
+      "used_in": [
+        "iran"
+      ]
+    },
+    {
+      "source": "Bloomberg Markets",
+      "title": "Saudi-Led Forces Claim Ground Advances Against Houthis in Yemen",
+      "published_at": "2026-10-08T05:38:23+08:00",
+      "used_in": [
+        "iran"
+      ]
+    },
+    {
+      "source": "金十数据快讯",
+      "title": "雪佛龙(CVX.N)：为应对热带风暴，已对雪佛龙运营的位于墨西哥湾的四处设施启动生产停产程序，部分额外人员正在被转移至陆上，墨西哥湾其他五处设施的产量仍保持在正常水平。陆上设施将继续遵循既定的风暴应对程序。",
+      "published_at": "2026-10-08T07:48:41+08:00",
+      "used_in": [
+        "iran"
+      ]
+    },
+    {
+      "source": "金十数据快讯",
+      "title": "【中信证券：油运周期重塑强化，关注快递&跨境旺季】金十数据10月8日讯，中信证券研报称，3Q26交运物流板块的业绩预测延续景气度分化，周期范式重塑驱动油运、集运释放利润弹性，油运主要矛盾再迎驱动，继续推荐受益原油轮国庆后即期价格新一轮冲高的",
+      "published_at": "2026-10-08T08:08:14+08:00",
+      "used_in": [
+        "iran"
+      ]
+    },
+    {
+      "source": "Reuters",
+      "title": "Rate hike fears weigh on UK housing market, RICS says",
+      "published_at": "2026-10-08T07:50:16.218000+08:00",
+      "used_in": [
+        "macro"
+      ]
+    },
+    {
+      "source": "金十数据快讯",
+      "title": "中信证券研报称，预计年底美元兑人民币或在6.60-6.70，汇率约束减弱也使国内货币宽松的空间更为从容。",
+      "published_at": "2026-10-08T08:02:12+08:00",
+      "used_in": [
+        "macro"
+      ]
+    }
+  ]
+}
