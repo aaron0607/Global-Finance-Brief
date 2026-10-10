@@ -1,5 +1,11 @@
 # 变更记录
 
+## 2026-10-10 · 文档对齐实际生产：服务器 DeepSeek 写稿为生产，云端通道暂停；代码同步统一走 GitHub main
+
+- **背景**：GitHub `main`（PR #1–#6）记录的是 09-27 起的「Claude cloud 写稿 + `briefs` 交接 + 服务器 `server_publish.sh` 发布」流程；用户已于 10-09 主动停用云端 Routine，服务器 cron 改回 `run_brief.sh`（DeepSeek 写稿），文档未同步。本机 main 又落后 GitHub 15 个提交，10-10 按旧规则 `git push production main` 时用本机旧代码覆盖了服务器，回退了 PR #2–#6 的改动（新闻池来源分级、美联储情景随事实、「习」简称、RSS CDATA 与重试等）。
+- **改动**：`AGENTS.md` 改写「生产调度」并新增「代码同步」：生产 = 服务器 08:20 `run_brief.sh`；云端通道标注暂停、代码保留、恢复须先停 `run_brief.sh` cron；代码以 GitHub `main` 为唯一权威，走分支 + PR，服务器只用 `server_sync.py` 同步，禁止 `git push production main`（本机已移除该 remote）。`README.md`、`docs/cloud-routine.md`、`server_publish.sh` 头注释同步标注暂停状态；新闻池口径等描述改为以 DeepSeek 通道为准。
+- **影响**：仅文档与流程约定，无运行逻辑变化。服务器已用 `server_sync.py` 恢复到 GitHub 代码。
+
 ## 2026-10-10 · alert 超上限确定性收窄：修复导读反复超长导致自动稿失败
 
 - **线上现象**：`20261010` 08:20 服务器任务失败，飞书报"模型已返回 JSON，但结构/字数/强调色校验未通过"。日志显示 6 次尝试全部卡在 `alert 可见正文应为 180-260 字`（287→268→370→268→306→268），第 1 次另有 `logic_chain.priority` 为空；正文其余部分基本合规。

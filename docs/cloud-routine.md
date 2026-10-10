@@ -1,4 +1,6 @@
-# 云端写稿 + 服务器发布（生产调度）
+# 云端写稿 + 服务器发布（已暂停）
+
+> **状态：2026-10-09 起暂停。** 用户主动停用了 Claude Code cloud Routine，当前生产为服务器 DeepSeek 写稿（`run_brief.sh`，见 `AGENTS.md`「生产调度」）。本文件保留为恢复手册：恢复时先在服务器注释掉 `run_brief.sh` 那行 cron，再按下文「上线步骤」重建 Routine 并加回 `server_publish.sh` 的 cron，同一天只能有一个发布者。
 
 2026-09-27 起的生产分工：
 

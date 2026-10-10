@@ -32,7 +32,7 @@
    - 新闻来源固定使用：**Bloomberg/CNBC RSS**；**Reuters 官方 news sitemap**（`fetch_news.py` 已并入，不可达时退回 Bing News `site:reuters.com`）；**金十数据（jin10）快讯+文章列表+关键词快讯搜索**；**alphaear 脚本聚合** 的财联社/华尔街见闻/雪球热榜；**富途牛牛 futu-news-search**（`fetch_news.py` 已并入）；**华尔街见闻·美股直播**（`api-one.wallstcn.com/apiv1/content/lives?channel=us-stock-channel`，`fetch_news.py` 已并入）；**WebSearch**（含 domain:reuters.com）只用于核验新闻池内已有事实的时间、数字与表述。不使用新浪财经新闻搜索（余额不稳定），不派生代理。
    - 搜索全流程最多 5 组（AI/科技与宏观必查，地缘仅有实质进展时查，焦点深挖最多 2 组），同一主题不得换关键词重复搜索。
    - 这 5 组搜索应**一次性并行发出**，不要串行等待。不再批量 WebFetch 文章原文（2026-09-27 实测 11 篇里 10 篇被 CNBC/NPR/富途等站点拦截或无正文，白耗时间）。
-   - **正文事实严格只用新闻池**：云端写稿以 `cloud_collect.sh` 生成的 `news_pool.json`（`make_news_pool.py`：`[as_of-24h, as_of]` 窗口内、去重、按来源分级，与 `write_brief.build_news_pool` 同一口径）为唯一新闻事实来源，`sources` 也只能从中选。WebSearch 搜到但新闻池里没有的事实、数字、条款、人物言论一律不得写入正文，只能用来核对池内事实。
+   - **正文事实严格只用新闻池**：生产（DeepSeek）由 `write_brief.build_news_pool` 从 `news_feed.json` 构建新闻池（`[as_of-24h, as_of]` 窗口内、去重、按来源分级）；云端写稿通道（已暂停）用 `cloud_collect.sh` 生成的同口径 `news_pool.json`（`make_news_pool.py`）。新闻池是唯一新闻事实来源，`sources` 也只能从中选。WebSearch 搜到但新闻池里没有的事实、数字、条款、人物言论一律不得写入正文，只能用来核对池内事实。
    - 常规简报不得使用代理继续派生代理。
 3. 仅编辑 `content_YYYYMMDD.json`；不要手改生成的 HTML。`calendar` 字段直接照抄 `calendar_feed.json` 的 `events`（`date` / `date_iso` / `event` / `stars`），不得增删日期或改写时间。JSON 顶层的 `as_of` 必须原样复制 `market_snapshot.json.run_started_at`，且禁止手写 `indices` / `commodities`。从 `20260727` 起必须在 JSON 顶层维护 `sources`，每项包含 `source`、`title`、带时区的 ISO 8601 `published_at`、以及板块 id 数组 `used_in`；每个正文板块至少映射一个有效来源。
    - **构造 JSON 必须使用 Python `json.dump()`**，不要手写 JSON 字符串——中文弯引号 `””` 与 JSON 半角引号 `””` 视觉相似但解析不兼容，手写极易浪费多轮重试。
@@ -47,7 +47,7 @@
    - 首次构建后查看分段字数统计，按比例一次性调整到位（例如 focus 948 字超了，看哪些板块超出目标比例最多就砍哪里）。
    - 写稿时按每条 bullet 约 330–380 个可见字、alert 约 200 字控制篇幅，力求首次构建即落在 6,300–6,600 字。
    - 全程构建最多 3 次。**不要逐字微调**——看到超限优先压缩最大板块的重复背景，欠字优先扩写 ai_tech 或 focus 的交叉验证；仅在不违反 bullet 数量范围时整段增删。
-5. 发布只在腾讯云服务器进行（云端写稿会话只交接，不发布）。人工运行发布前须取得用户当次确认：`.venv/bin/python publish_wechat.py YYYYMMDD` 会创建公众号草稿并发送飞书通知。已获用户明确授权的每日自动任务可直接发布当天草稿；失败时不得重复创建。
+5. 发布只在腾讯云服务器进行。人工运行发布前须取得用户当次确认：`.venv/bin/python publish_wechat.py YYYYMMDD` 会创建公众号草稿并发送飞书通知。已获用户明确授权的每日自动任务可直接发布当天草稿；失败时不得重复创建。
 6. 需要修订已有草稿时，使用 `.venv/bin/python publish_wechat.py --update YYYYMMDD MEDIA_ID`；必须更新原草稿，禁止用新建草稿替代修订。
 
 ## 内容规则
@@ -58,7 +58,7 @@
 - **人名简称**：成稿中「习近平」一律写作「习」（含标题、导读、正文、逻辑框架、note；如“国家主席习”“习主席”）。`build_brief.py` 构建时按 `content_validation.NAME_ABBREVIATIONS` 自动替换并回写 content（`sources` 来源登记保留新闻原标题），成稿终检与 `publish_wechat.py` 发现残留全称即拦截。
 - **事实与解读分离**：新闻事实（谁、发生了什么、官方数据、公司财报数字）严格按新闻原文客观呈现，原样引用数字，不套用主观立场；若观点本身就来自新闻（机构/官方表态），照写不改。
 - **解读必须对齐用户观点（仅方向）**：所有投资解读/观点部分（课代表点评、逻辑判断、路径分析、风险提示，以及对黄金/AI·半导体/地缘/美联储/资金轮动的方向判断）必须对齐飞书「股市马斯克文章发表」**最近 3 篇文章**（最新一篇最权威，观点以最新为准）的多空方向。**飞书文章只提供方向观点，绝不是素材**：`write_brief.py` 先把飞书原文提炼成纯"立场清单"（只保留各主题多空方向与要点，剥离标题、措辞、数字、事件细节），再喂给写稿模型；**严禁**引用飞书标题、措辞、价格/持仓数字或事件表述作为正文内容。
-- **新闻内容来源红线**：正文所有新闻事实、数据、事件、人物言论、公司财报数字只能来自新闻池（云端写稿为 `news_pool.json`；DeepSeek 应急通道为 `write_brief.py` 从 `news_feed.json` 构建的同口径新闻池）与 `market_snapshot.json`（行情），WebSearch 结果不得引入池外事实，飞书观点绝不进入新闻事实部分。**正文严禁出现"据XX报道""据报道""有报道称""据报""据XX称"等来源转述/出处表述**——事实直接客观陈述，不标注、不转述新闻来源；来源登记只存在 JSON `sources` 字段（脚本自动挂接），不进入成稿正文。
+- **新闻内容来源红线**：正文所有新闻事实、数据、事件、人物言论、公司财报数字只能来自新闻池（云端通道（已暂停）为 `news_pool.json`；生产 DeepSeek 通道为 `write_brief.py` 从 `news_feed.json` 构建的新闻池）与 `market_snapshot.json`（行情），WebSearch 结果不得引入池外事实，飞书观点绝不进入新闻事实部分。**正文严禁出现"据XX报道""据报道""有报道称""据报""据XX称"等来源转述/出处表述**——事实直接客观陈述，不标注、不转述新闻来源；来源登记只存在 JSON `sources` 字段（脚本自动挂接），不进入成稿正文。
 - **本周财经日历必须来自确定性日历源（防空表与错日期）**：`calendar` 由 `fetch_calendar.py` 产出的 `calendar_feed.json` 回填，模型/人工都不得自行决定日期。日期列固定写成「9月4日 周五」并附 `date_iso`；条目 1-6 条、按日期升序、不得早于简报日期、不得超出 10 天展望窗口。`content_validation.validate_calendar()` 在写稿、构建、发布三个入口硬拦截（空表、星期错配、过期或越界日期、乱序一律失败）。日历源全部不可用时才退回 `sanitize_calendar()` 的新闻池溯源清洗，宁可少、不可错。
 - **标题必须是高信息密度新闻播报**：优先两行；第一行写主事件及直接市场反应，第二行写另一条足以影响定价的科技、宏观、地缘或大宗副线。每行可放 1-2 个紧密相关的事实信号、最多 24 字；事实、数字、方向和因果须可溯源。禁止投资观点、预测、问句/感叹号、标题党、来源转述、内部口径和飞书标题/改写。模型标题不合规时只单独修复标题，不得因此丢弃并重写整篇；单独修复仍失败时由行情快照生成合规兜底标题。详见 [`docs/title-style.md`](docs/title-style.md)。
 - **正文编辑感**：板块标题必须写出核心矛盾或结论，不能只罗列新闻名词。全文采用约 17 个少而完整的论证段，每段按“事实与数字→市场反应/交叉验证→传导逻辑→风险或验证条件”推进；不要机械地给每段加粗体小标题，不重复背景，不用万能结论凑字。导读控制在 180-240 字，note 控制在 40-90 字。
@@ -75,7 +75,7 @@
 - 本项目使用本地 Git 仓库做版本管理，范围限于代码、规则与模板：`*.py`、`AGENTS.md`、`README.md`、`CHANGELOG.md`、`content_template.json`、`docs/`、`wechat_fragments/`、`requirements.txt`、`run_brief.sh`、`cloud_collect.sh`、`server_publish.sh`。
   - 每日抓取/生成的运行数据与产出物（`content_YYYYMMDD.json`、`wechat_article_YYYYMMDD.html`、`market_snapshot.json`、`news_feed.json`、`calendar_feed.json`、`views_feed.json`、`qdii_cache.json`）、`.venv/`、`__pycache__/`、`backups/`、`.secrets.env`、`.claude/settings.local.json` 由 `.gitignore` 排除，不纳入版本管理——这些要么可重新生成，要么已用文件名日期自成历史，要么含机器本地路径或密钥。
   - 提交前用 `git status` 确认暂存内容，不要用 `git add -A`/`git add .` 整批加入，避免误提交上述排除范围。
-  - 本地仓库当前无远程；如需推送到服务器或建立远程仓库，需先与用户确认。
+  - 远程：`origin` = GitHub `aaron0607/Global-Finance-Brief`，`main` 为代码唯一权威版本；改动走分支 + PR，由用户合并。本机 `main` 只做 `git pull --ff-only origin main` 跟随，不在本机 main 上直接提交。
 
 ## 典型故障处理
 
@@ -117,12 +117,16 @@
 - `fetch_market.py` 是行情唯一写入入口，不依赖 yfinance；除 VIX 外不使用 Yahoo。VIX 为 Yahoo chart 优先、CBOE 兜底（服务器 IP 常被 Yahoo 429，届时自动走 CBOE）；当前新浪、东方财富、Yahoo 和 CBOE 的逐项映射及新鲜度口径见 `README.md`「行情口径」。
 - 东方财富请求必须使用 `push2delay` 延时主机，禁止换成易限流空响应的 `push2`；东财失败时仅允许退回脚本内置的新浪兜底代码（`hf_OIL` / `globalbd_us10yt` / `DINIW`）；任何核心标的缺失或错位都应硬失败，不得从新闻或旧快照补值。
 
-## 生产调度（云端写稿 + 服务器发布）
+## 生产调度（服务器 DeepSeek 写稿 + 发布）
 
-- **写稿在 Claude Code cloud**：定时 Routine 于北京时间每日 08:20 新开会话，运行 `origin/main` 最新代码：`cloud_collect.sh` 采集 → Claude 按本文件写 `content_YYYYMMDD.json` → `build_brief.py` 构建与终检 → `cloud_handoff.py YYYYMMDD` 把成稿推到 GitHub `briefs` 分支；任何关键环节失败用 `cloud_handoff.py YYYYMMDD --failed "原因"` 交接失败标记。云端**绝不**运行 `publish_wechat.py`。Routine 提示词、上线步骤与安全边界见 [`docs/cloud-routine.md`](docs/cloud-routine.md)。
-- **发布在腾讯云服务器 `115.159.56.153`**（微信 API IP 白名单所在）：cron 在北京时间 08:00–09:00 每 5 分钟运行 `server_publish.sh`（窗口外脚本直接退出，当天草稿建好后后续轮次在拉取前退出），经 GitHub REST API（服务器连不上 github.com，但 api.github.com 可达；只读令牌 `BRIEF_GITHUB_TOKEN` 存服务器 `.secrets.env`）读 `briefs` 分支，拿到当日 `READY.json` 后执行 `publish_wechat.py`（发布前终检照旧），每天只建一次草稿；收到 `FAILED.txt`、08:50 仍无成稿、拉取失败或发布失败时飞书告警。
-- 服务器不再挂 `run_brief.sh` 的 cron；它保留为云端整天不可用时的**手动应急通道**（DeepSeek 写稿），与 Routine 同一天只能二选一，禁止形成两个发布者。本机调度保持停用。
-- 云端环境变量：`JIN10_MCP_TOKEN`、`LARK_APP_ID`、`LARK_APP_SECRET` 按数据源需要配置（在环境设置里添加，不写入仓库）；云端写稿不需要 `DEEPSEEK_API_KEY`。服务器 `.secrets.env`（chmod 600）只在走应急通道时需要 `DEEPSEEK_API_KEY`。cron 重定向前必须先创建 `logs/`。
-- `fetch_views.py` 失败属于非致命告警；行情、新闻或财经日历失败（`fetch_calendar.py` 重试一次仍失败）、结构/字数校验失败、构建失败均必须终止并交接 FAILED。DeepSeek 应急稿没有实时 WebSearch，发布前建议复核关键数字。
-- 代码以 GitHub `main` 为准（Routine 每次拉取最新 main）；脚本、规则或文档变更必须测试后合并到 main，并同步服务器（服务器用到 `publish_wechat.py`、`build_brief.py`、`content_validation.py`、`wechat_fragments/`、`server_publish.sh`），禁止直接在服务器形成长期分叉。`briefs` 分支只放每日运行产物，不放代码。
-- 同步方式：服务器执行 `python3 server_sync.py` 经 GitHub API 把 `main` 的跟踪文件同步到 `/home/ubuntu/finance-brief`（运行数据不动，被覆盖的旧文件备份到 `backups/sync_*/`）。旧方式仍可用：本机仓库已配置 `production` remote（`ssh://ubuntu@115.159.56.153/home/ubuntu/finance-brief.git`，走裸仓库 `post-receive` hook 自动 `checkout -f` 到 `/home/ubuntu/finance-brief`），改完代码/规则后本机执行 `git push production main` 即可单向同步；服务器不会反向推送，每日抓取生成的运行数据不受影响。`core.sshCommand` 已在本地仓库配置指向 `~/.ssh/lct_cloud`，无需每次手动指定密钥。
+- **当前生产（2026-10-09 起）**：唯一生产任务在腾讯云服务器 `115.159.56.153`（微信 API IP 白名单所在），北京时间每日 08:20 由 cron 触发 `run_brief.sh`：Phase 1 采集 → `write_brief.py` 调 DeepSeek 写稿（结构/字数/强调色定向修复 + 确定性兜底）→ `build_brief.py` 构建与终检 → `publish_wechat.py` 建草稿 + 飞书通知。已获用户授权的每日自动任务可直接发布当天草稿；失败时不得重复创建。本机调度保持停用，禁止形成两个发布者。
+- 服务器 crontab 只保留这一行（`CRON_TZ=Asia/Shanghai`）：`20 8 * * * mkdir -p /home/ubuntu/finance-brief/logs && /usr/bin/flock -n /tmp/finance-brief.lock /home/ubuntu/finance-brief/run_brief.sh >> /home/ubuntu/finance-brief/logs/cron.log 2>&1`。`server_publish.sh` 的 cron 已移除。
+- 服务器 `.secrets.env`（chmod 600）必填 `DEEPSEEK_API_KEY`、`BRIEF_GITHUB_TOKEN`（同步代码用，只读）；`JIN10_MCP_TOKEN`、`LARK_APP_ID`、`LARK_APP_SECRET` 按数据源需要选配。cron 重定向前必须先创建 `logs/`。
+- `fetch_views.py` 失败属于非致命告警；行情、新闻或财经日历失败（`fetch_calendar.py` 重试一次仍失败）、结构/字数校验失败、构建失败均必须终止。DeepSeek 自动稿没有实时 WebSearch，发布前建议复核关键数字。
+- **云端写稿通道（已暂停，保留待复用）**：2026-09-27 至 10-08 曾由 Claude Code cloud Routine 写稿、经 GitHub `briefs` 分支交接、服务器 `server_publish.sh` 发布。用户已于 10-09 主动停用 Routine，相关代码（`cloud_collect.sh`、`cloud_handoff.py`、`make_news_pool.py`、`server_publish.sh`）保留但不运行。恢复步骤见 [`docs/cloud-routine.md`](docs/cloud-routine.md)；恢复时必须先注释掉服务器的 `run_brief.sh` cron，同一天只能有一个发布者。
+
+## 代码同步
+
+- 代码以 GitHub `main` 为唯一权威版本：改动在本机分支上完成并测试 → 推送分支、开 PR → 用户合并到 `main` → 本机 `git pull --ff-only origin main` → 服务器同步。禁止直接在服务器或本机 main 上形成长期分叉。
+- 服务器同步：`cd /home/ubuntu/finance-brief && python3 server_sync.py`，经 GitHub REST API 把 `main` 的跟踪文件同步过来（服务器连不上 github.com，但 api.github.com 可达），运行数据不动，被覆盖的旧文件备份到 `backups/sync_*/`，同步到的提交记在 `.synced_commit`。可先加 `--dry-run` 预览。
+- **禁止**再用 `git push production main`：该方式会用本机 main 整体 `checkout -f` 覆盖服务器，2026-10-10 曾因本机 main 落后 GitHub 而把服务器代码回退。本机已移除 `production` remote。

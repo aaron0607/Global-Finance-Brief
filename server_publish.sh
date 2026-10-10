@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# 【已暂停，2026-10-09 起不挂 cron；当前生产为 run_brief.sh，见 AGENTS.md】
 # 腾讯云服务器「只发布」脚本：经 GitHub REST API 轮询 briefs 分支，拿到云端当日成稿后建公众号草稿（每天只建一次）。
 #
 # 分工：Claude Code cloud 定时会话（北京时间 08:20）采集 + 写稿 + 构建，经 cloud_handoff.py 推到

@@ -89,4 +89,4 @@ python3 -m venv .venv
 
 客户成稿只呈现市场事实、公开数据口径和投资解读，不披露脚本、快照文件、内部文档或后台运行机制。行情总览只显示资产名称、价格和涨跌：指数表头显示实际最近交易日的“X月X日收盘”，大宗/外汇表头显示该组最新有效报价的北京时间日期“X月X日”。两组日期独立更新；周末或休市时沿用最近实际行情日期，不随简报日期自动推进。大宗/外汇表不展示 ticker、逐行报价时间、交易状态或表下行情口径说明，这些审计字段仍完整保留在快照和构建校验中。
 
-生产调度为「Claude Code cloud 定时写稿 + 腾讯云服务器发布」，经 GitHub `briefs` 分支交接，见 `docs/cloud-routine.md` 与 `AGENTS.md`「生产调度」；`run_brief.sh` 保留为服务器手动应急通道；Codex 项目规则以 `AGENTS.md` 为准。内容只写入 `content_YYYYMMDD.json`，禁止直接编辑 HTML。
+生产调度为「腾讯云服务器 DeepSeek 写稿 + 发布」（`run_brief.sh`，每日 08:20），见 `AGENTS.md`「生产调度」与「代码同步」；Claude Code cloud 写稿通道已于 2026-10-09 暂停、代码保留，恢复步骤见 `docs/cloud-routine.md`。代码以 GitHub `main` 为准，服务器用 `server_sync.py` 同步。Codex 项目规则以 `AGENTS.md` 为准。内容只写入 `content_YYYYMMDD.json`，禁止直接编辑 HTML。
