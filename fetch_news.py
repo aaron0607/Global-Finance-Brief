@@ -577,6 +577,43 @@ def main():
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
     print(f"已写入: {out_path} ({len(items)} 条)", file=sys.stderr)
+    update_history(items)
+
+
+HISTORY_DAYS = 10
+
+
+def update_history(items: list[dict], path: Path | None = None, now: dt.datetime | None = None) -> int:
+    """把本次采集合并进 news_history.json（按标题去重，保留最近 HISTORY_DAYS 天），供写稿器识别
+    "旧闻换时间戳转载"。只存标题/来源/时间，失败不阻断采集。返回历史条数。"""
+    path = path or BASE_DIR / "news_history.json"
+    now = now or dt.datetime.now(BRIEF_TZ)
+    cutoff = now - dt.timedelta(days=HISTORY_DAYS)
+    merged = {}
+    try:
+        old = json.loads(path.read_text(encoding="utf-8")).get("items", []) if path.exists() else []
+    except ValueError:
+        old = []
+    for item in old + items:
+        title = (item.get("title") or "").strip()
+        published = item.get("published_at") or ""
+        try:
+            ts = dt.datetime.fromisoformat(published)
+        except ValueError:
+            continue
+        if not title or ts.tzinfo is None or ts < cutoff:
+            continue
+        key = re.sub(r"\s+", "", title)[:80]
+        prev = merged.get(key)
+        if prev is None or published < prev["published_at"]:  # 保留最早一次发布时间
+            merged[key] = {"title": title, "source_id": item.get("source_id", ""),
+                           "published_at": published}
+    try:
+        path.write_text(json.dumps({"updated_at": now.isoformat(), "items": list(merged.values())},
+                                   ensure_ascii=False) + "\n", encoding="utf-8")
+    except OSError as exc:
+        print(f"[warn] news_history 写入失败：{exc}", file=sys.stderr)
+    return len(merged)
 
 
 if __name__ == "__main__":

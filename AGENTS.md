@@ -56,6 +56,7 @@
 - `ai_tech` 是核心板块；commodity 固定两段（黄金一段；布伦特原油期货与美元指数合并一段）。
 - 事件客观呈现；解读用”课代表视角/框架”，不用”用户视角”。
 - **人名简称**：成稿中「习近平」一律写作「习」（含标题、导读、正文、逻辑框架、note；如“国家主席习”“习主席”）。`build_brief.py` 构建时按 `content_validation.NAME_ABBREVIATIONS` 自动替换并回写 content（`sources` 来源登记保留新闻原标题），成稿终检与 `publish_wechat.py` 发现残留全称即拦截。
+- **主语必须点名，旧闻不得换时间戳混入**：涉及具体公司/机构的事实必须写出名称，严禁用“芯片巨头”“存储龙头”“某公司”等泛称指代单一主体（`write_brief.validate_required` 拦截并打回修复）。`fetch_news.py` 每次采集把标题累积进 `news_history.json`（保留 10 天）；`write_brief.build_news_pool` 入池前剔除两类条目并在日志打印：标题为泛称主语且无摘要的标题党；与窗口外旧新闻共享同一辨识度数字（带“亿/万亿”的金额或带小数的百分比）且标题至少 2 个中文双字重合的旧闻转载。
 - **事实与解读分离**：新闻事实（谁、发生了什么、官方数据、公司财报数字）严格按新闻原文客观呈现，原样引用数字，不套用主观立场；若观点本身就来自新闻（机构/官方表态），照写不改。
 - **解读必须对齐用户观点（仅方向）**：所有投资解读/观点部分（课代表点评、逻辑判断、路径分析、风险提示，以及对黄金/AI·半导体/地缘/美联储/资金轮动的方向判断）必须对齐飞书「股市马斯克文章发表」**最近 3 篇文章**（最新一篇最权威，观点以最新为准）的多空方向。**飞书文章只提供方向观点，绝不是素材**：`write_brief.py` 先把飞书原文提炼成纯"立场清单"（只保留各主题多空方向与要点，剥离标题、措辞、数字、事件细节），再喂给写稿模型；**严禁**引用飞书标题、措辞、价格/持仓数字或事件表述作为正文内容。
 - **新闻内容来源红线**：正文所有新闻事实、数据、事件、人物言论、公司财报数字只能来自新闻池（云端通道（已暂停）为 `news_pool.json`；生产 DeepSeek 通道为 `write_brief.py` 从 `news_feed.json` 构建的新闻池）与 `market_snapshot.json`（行情），WebSearch 结果不得引入池外事实，飞书观点绝不进入新闻事实部分。**正文严禁出现"据XX报道""据报道""有报道称""据报""据XX称"等来源转述/出处表述**——事实直接客观陈述，不标注、不转述新闻来源；来源登记只存在 JSON `sources` 字段（脚本自动挂接），不进入成稿正文。
@@ -73,7 +74,7 @@
 - 修改渲染器时，微信彩框必须使用 `<section>` 与 `background-color`；不要改成 `<div>`/`<p>` 彩框或 `background` 简写。
 - 每次修改流程或脚本，在本目录 `CHANGELOG.md` 顶部记录原因和影响；git 提交信息可以简短，不替代 `CHANGELOG.md` 里的原因与影响说明。
 - 本项目使用本地 Git 仓库做版本管理，范围限于代码、规则与模板：`*.py`、`AGENTS.md`、`README.md`、`CHANGELOG.md`、`content_template.json`、`docs/`、`wechat_fragments/`、`requirements.txt`、`run_brief.sh`、`cloud_collect.sh`、`server_publish.sh`。
-  - 每日抓取/生成的运行数据与产出物（`content_YYYYMMDD.json`、`wechat_article_YYYYMMDD.html`、`market_snapshot.json`、`news_feed.json`、`calendar_feed.json`、`views_feed.json`、`qdii_cache.json`）、`.venv/`、`__pycache__/`、`backups/`、`.secrets.env`、`.claude/settings.local.json` 由 `.gitignore` 排除，不纳入版本管理——这些要么可重新生成，要么已用文件名日期自成历史，要么含机器本地路径或密钥。
+  - 每日抓取/生成的运行数据与产出物（`content_YYYYMMDD.json`、`wechat_article_YYYYMMDD.html`、`market_snapshot.json`、`news_feed.json`、`calendar_feed.json`、`views_feed.json`、`qdii_cache.json`、`news_history.json`）、`.venv/`、`__pycache__/`、`backups/`、`.secrets.env`、`.claude/settings.local.json` 由 `.gitignore` 排除，不纳入版本管理——这些要么可重新生成，要么已用文件名日期自成历史，要么含机器本地路径或密钥。
   - 提交前用 `git status` 确认暂存内容，不要用 `git add -A`/`git add .` 整批加入，避免误提交上述排除范围。
   - 远程：`origin` = GitHub `aaron0607/Global-Finance-Brief`，`main` 为代码唯一权威版本；改动走分支 + PR，由用户合并。本机 `main` 只做 `git pull --ff-only origin main` 跟随，不在本机 main 上直接提交。
 

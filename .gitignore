@@ -14,6 +14,7 @@ __pycache__/
 market_snapshot.json
 news_feed.json
 news_pool.json
+news_history.json
 calendar_feed.json
 views_feed.json
 views_feed.txt
