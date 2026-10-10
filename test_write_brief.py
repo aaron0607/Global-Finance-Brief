@@ -15,6 +15,9 @@ from write_brief import (
     build_repair_prompt,
     compress_bullets,
     ensure_alert_ceiling,
+    filter_stale_and_vague,
+    is_stale_rehash,
+    vague_subject_hits,
     ensure_length_floors,
     ensure_main_title,
     ensure_note_floor,
@@ -474,6 +477,63 @@ class AlertCeilingTests(unittest.TestCase):
         content = {"alert": "**过去24小时核心变化**：" + "甲" * 200 + "[[c:乙；丙]]" + "丁" * 70 + "。"}
         ensure_alert_ceiling(content)
         self.assertEqual(content["alert"].count("[["), content["alert"].count("]]"))
+
+
+class StaleAndVagueNewsTests(unittest.TestCase):
+    """旧闻转载 / 泛称主语（2026-10-10 三星"芯片巨头800亿"事故）。"""
+
+    REHASH = "超越英伟达！芯片巨头单季利润800亿美元，全球第一！"
+    OLD = ["三星季度利润$800亿超越英伟达，AMD的苏姿丰在首尔采购",
+           "【BT财报瞬析】单季赚800亿美元，存储芯片的AI超级周期"]
+
+    def test_vague_subject_hits(self):
+        self.assertEqual(vague_subject_hits(self.REHASH), ["芯片巨头"])
+        self.assertEqual(vague_subject_hits("某公司计划裁员"), ["某公司"])
+        # 复数/板块用法、点名主语不拦
+        for ok in ("科技巨头资本开支合计超3000亿美元", "存储龙头美光董事会批准扩大回购",
+                   "芯片巨头们集体走弱", "三星电子单季营业利润首破100万亿韩元"):
+            self.assertEqual(vague_subject_hits(ok), [], ok)
+
+    def test_stale_rehash_needs_shared_number_and_words(self):
+        self.assertIsNotNone(is_stale_rehash(self.REHASH, self.OLD))
+        self.assertIsNotNone(is_stale_rehash("三星单季利润800亿美元登顶全球", self.OLD))
+        # 数字相同但内容无关、或无辨识度数字 → 不判旧闻
+        self.assertIsNone(is_stale_rehash("股基ETF净流入800亿元", self.OLD))
+        self.assertIsNone(is_stale_rehash("英伟达计划投资D-Matrix", self.OLD))
+        self.assertIsNone(is_stale_rehash(self.REHASH, []))
+
+    def test_filter_keeps_summarized_and_fresh_items(self):
+        items = [
+            {"title": self.REHASH, "summary": ""},
+            {"title": "芯片巨头单季利润创新高", "summary": "三星电子公布业绩……"},
+            {"title": "英伟达(NVDA.US)支持的AI数据中心企业Firmus IPO告吹", "summary": ""},
+        ]
+        kept, dropped = filter_stale_and_vague(items, [])
+        self.assertEqual([it["title"] for it in kept], [items[1]["title"], items[2]["title"]])
+        self.assertEqual(len(dropped), 1)
+
+    def test_validate_required_rejects_vague_subject(self):
+        content = {"main_title": "芯片巨头单季利润800亿美元", "alert": "", "sections": []}
+        errors = validate_required(content, "20261010")
+        self.assertTrue(any("主语必须点名" in e for e in errors))
+
+    def test_update_history_dedupes_keeps_earliest_and_expires(self):
+        import json as _json
+        import tempfile
+        from pathlib import Path
+        from fetch_news import update_history
+        now = dt.datetime(2026, 10, 10, 9, 0, tzinfo=dt.timezone(dt.timedelta(hours=8)))
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "news_history.json"
+            update_history([
+                {"title": "A 新闻", "published_at": "2026-10-08T07:37:00+08:00"},
+                {"title": "过期", "published_at": "2026-09-20T07:00:00+08:00"},
+                {"title": "无时区", "published_at": "2026-10-09T07:00:00"},
+            ], path, now)
+            update_history([{"title": "A  新闻", "published_at": "2026-10-10T08:32:00+08:00"}], path, now)
+            items = _json.loads(path.read_text(encoding="utf-8"))["items"]
+        self.assertEqual(len(items), 1)
+        self.assertEqual(items[0]["published_at"], "2026-10-08T07:37:00+08:00")
 
 
 class CompressBulletsTests(unittest.TestCase):

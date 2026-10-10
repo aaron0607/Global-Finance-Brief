@@ -172,6 +172,86 @@ def source_tier(source_id: str) -> int:
     return SOURCE_TIERS.get(source_id or "", 3)
 
 
+# ── 旧闻转载 / 泛称主语过滤（2026-10-10 事故） ─────────────────────
+# 富途把 10-08 的三星 Q3 初步业绩改写成"芯片巨头单季利润800亿美元"，10-10 08:32 带新时间戳
+# 重新发布、无摘要；它落在 24h 窗口内，模型照抄"芯片巨头"写成头条，既无主语又是两天前的旧闻。
+NEWS_HISTORY_FILE = "news_history.json"
+# 行业泛称 + 单数事件动词/指标 = 指代某一家公司却不点名（"科技巨头资本开支"等复数用法不拦）
+VAGUE_SUBJECT_RE = re.compile(
+    r"(?:芯片|存储|半导体|科技|AI|算力|能源|石油|汽车|手机|电商|互联网|金融|银行|医药|消费|软件|云计算|晶圆|代工)"
+    r"(?:巨头|龙头|大厂|霸主)(?=单季|季度|宣布|发布|计划|拟|将|称|表示|股价|市值|利润|营收|净利|CEO|旗下|公布|首次|刷新|创下)"
+    r"|某(?:公司|巨头|芯片商|厂商|企业|大厂|科技公司|龙头)"
+)
+_AMOUNT_RE = re.compile(r"(\d+(?:\.\d+)?)\s*(万亿|亿)")
+_PCT_RE = re.compile(r"(\d+\.\d+)\s*%")
+_CJK_RUN_RE = re.compile(r"[\u4e00-\u9fff]+")
+
+
+def vague_subject_hits(text: str) -> list[str]:
+    """返回文本中不点名的泛称主语（如"芯片巨头单季…""某公司"）。"""
+    return [m.group(0) for m in VAGUE_SUBJECT_RE.finditer(text or "")]
+
+
+def _number_tokens(text: str) -> set[str]:
+    """标题里有辨识度的数字：带"亿/万亿"的金额与带小数的百分比（货币单位忽略）。"""
+    tokens = {num + unit for num, unit in _AMOUNT_RE.findall(text or "")}
+    tokens |= {num + "%" for num in _PCT_RE.findall(text or "")}
+    return tokens
+
+
+def _bigrams(text: str) -> set[str]:
+    grams = set()
+    for run in _CJK_RUN_RE.findall(text or ""):
+        grams |= {run[i:i + 2] for i in range(len(run) - 1)}
+    return grams
+
+
+def is_stale_rehash(title: str, older_titles: list[str]) -> str | None:
+    """窗口内条目若与更早（窗口外）新闻共享同一辨识度数字、且标题至少 2 个中文双字重合，
+    视为旧闻换时间戳转载，返回命中的旧标题；否则 None。"""
+    nums = _number_tokens(title)
+    if not nums:
+        return None
+    grams = _bigrams(title)
+    for old in older_titles:
+        if nums & _number_tokens(old) and len(grams & _bigrams(old)) >= 2:
+            return old
+    return None
+
+
+def load_older_titles(feed_items: list[dict], window_start: dt.datetime) -> list[str]:
+    """窗口开始前发布的新闻标题：来自本次 news_feed 的旧条目 + news_history.json 累积历史。"""
+    items = list(feed_items)
+    path = BASE / NEWS_HISTORY_FILE
+    if path.exists():
+        try:
+            items += json.loads(path.read_text(encoding="utf-8")).get("items", [])
+        except ValueError:
+            pass
+    titles = []
+    for item in items:
+        published = parse_iso(item.get("published_at"))
+        if published and published < window_start and item.get("title"):
+            titles.append(item["title"])
+    return titles
+
+
+def filter_stale_and_vague(candidates: list[dict], older_titles: list[str]) -> tuple[list[dict], list[str]]:
+    """剔除旧闻转载与"泛称主语且无摘要"的标题党条目，返回 (保留, 剔除说明)。"""
+    kept, dropped = [], []
+    for item in candidates:
+        title = item.get("title", "")
+        if not item.get("summary") and vague_subject_hits(title):
+            dropped.append("泛称主语且无摘要：%s" % title)
+            continue
+        old = is_stale_rehash(title, older_titles)
+        if old:
+            dropped.append("疑似旧闻转载：%s ≈ %s" % (title, old))
+            continue
+        kept.append(item)
+    return kept, dropped
+
+
 def build_news_pool(window_start: dt.datetime, window_end: dt.datetime) -> list[dict]:
     """读 news_feed.json，过滤到 24h 窗口、去重，按来源分级截断，返回候选池。
 
@@ -196,6 +276,10 @@ def build_news_pool(window_start: dt.datetime, window_end: dt.datetime) -> list[
             "published_at": published.isoformat(),
             "_ts": published.timestamp(),
         })
+    candidates, dropped = filter_stale_and_vague(
+        candidates, load_older_titles(feed.get("items", []), window_start))
+    for note in dropped:
+        print("  ⚠️ 新闻池剔除 %s" % note, file=sys.stderr)
     candidates.sort(key=lambda it: (it["tier"], -it["_ts"]))
     seen, unique = set(), []
     for item in candidates:
@@ -348,7 +432,7 @@ def build_prompt(snap: dict, pool: list[dict], day: str, date_cn: str, alert_tim
 1. **事实与解读分离**：对新闻事实（谁、发生了什么、官方数据、公司财报数字）严格按【新闻池】与【行情数据】客观呈现，原样引用数字，不套用任何主观立场。
 2. **新闻内容来源红线**：正文所有新闻事实、数据、事件、人物言论、公司财报数字，**只能来自【新闻池】与【行情数据】**。【你的观点参考】仅提供多空方向，**严禁**把它当作素材——不得引用其标题、措辞、价格/持仓数字或事件表述作为正文内容，也**严禁**把飞书标题或措辞改写成简报标题、alert、板块标题。**正文严禁出现"据XX报道""据报道""有报道称""据报""据XX称"等来源转述或出处表述**——事实直接客观陈述，不标注、不转述新闻来源（来源登记只存在于 JSON 的 sources 字段，由脚本自动挂接）。
 3. **解读仅对齐方向**：解读/点评/路径/风险判断的**多空方向**必须与【你的观点参考】一致（最新观点优先），但要用市场通用的专业语言独立表达，不得照搬原文句子。
-4. 人名简称：「习近平」一律写作「习」（如“国家主席习”“习主席”）。客户成稿只写事实、公开数据与投资解读，禁止出现"行情快照""脚本""新闻池""fetch""project""观点参考"等内部机制词；解读用"课代表框架/视角"，不要出现"用户视角"。
+4. 人名简称：「习近平」一律写作「习」（如“国家主席习”“习主席”）。**主语必须点名**：涉及具体公司/机构的事实必须写出名称（如“三星电子”“美光”），严禁用“芯片巨头”“存储龙头”“某公司”等泛称指代单一主体；新闻池标题若只有泛称、无法确认是哪家公司，就不要使用该条。客户成稿只写事实、公开数据与投资解读，禁止出现"行情快照""脚本""新闻池""fetch""project""观点参考"等内部机制词；解读用"课代表框架/视角"，不要出现"用户视角"。
 5. 输出 JSON 必须包含字段：date_yyyymmdd、date_cn、as_of、main_title、alert_time、alert、index_note、qdii_date_label、logic_chain、calendar、sources、sections。**禁止**写 indices/commodities 字段。
 6. **main_title 必须是高信息密度的两行新闻标题（重要）**：标题要让读者一眼看到当天最重要的交易结构，不得写成投资观点、行情预测或空泛研报摘要。
    - **结构**：优先写成两行；第一行放主事件及直接市场反应，第二行放另一条足以影响定价的科技、宏观、地缘或大宗副线。每行可容纳 1-2 个紧密相关的事实信号，但不得堆砌无关主题。只有当天确实只有一条核心增量时才用单行。
@@ -1140,6 +1224,20 @@ def validate_required(content: dict, day: str, bullet_rules: dict | None = None,
         errors.append("calendar 应为数组")
     errors.extend(validate_calendar(content))
     errors.extend(validate_emphasis(content))
+    vague = []
+    for text in [content.get("main_title"), content.get("alert")] + [
+            b for sec in content.get("sections", []) if isinstance(sec, dict)
+            for b in (sec.get("bullets") or []) if isinstance(b, str)]:
+        if isinstance(text, str):
+            vague += vague_subject_hits(text)
+    lc = content.get("logic_chain")
+    if isinstance(lc, dict):
+        for path in lc.get("paths") or []:
+            if isinstance(path, dict):
+                vague += vague_subject_hits(str(path.get("body", "")))
+    if vague:
+        errors.append("主语必须点名具体公司，禁止泛称：%s（写出公司名；无法确认是哪家公司就删掉该事实）"
+                      % "、".join(sorted(set(vague))))
     return errors
 
 
