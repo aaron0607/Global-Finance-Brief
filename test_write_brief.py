@@ -8,10 +8,13 @@ from write_brief import (
     NORMAL_PROFILE,
     THIN_PROFILE,
     WEEKDAYS,
+    ALERT_MAX,
+    ALERT_MIN,
     _expected_prev_us_session,
     build_prompt,
     build_repair_prompt,
     compress_bullets,
+    ensure_alert_ceiling,
     ensure_length_floors,
     ensure_main_title,
     ensure_note_floor,
@@ -434,6 +437,43 @@ class DeterministicNormalizerTests(unittest.TestCase):
         # 空段不凭空造整段，交给结构校验拦截
         self.assertEqual(ensure_length_floors(content), 0)
         self.assertEqual(content["sections"][0]["bullets"][0], "")
+
+
+class AlertCeilingTests(unittest.TestCase):
+    """alert 超上限时确定性删分句（2026-10-10 事故）。"""
+
+    def _alert(self):
+        return ("**过去24小时核心变化**：" + "首" * 60 + "，[[c:布伦特收104.59美元]]；"
+                + "科" * 60 + "，纳指涨0.64%；" + "白宫强制通报漏洞" + "软" * 50 + "；"
+                + "黄金涨1.47%" + "金" * 40 + "。[[c:资金转向蓝筹]]。")
+
+    def test_trims_into_range_prefers_fact_free_clause(self):
+        content = {"alert": self._alert()}
+        self.assertGreater(visible_text_length(content["alert"]), ALERT_MAX)
+        self.assertEqual(ensure_alert_ceiling(content), 1)
+        alert = content["alert"]
+        self.assertTrue(ALERT_MIN <= visible_text_length(alert) <= ALERT_MAX)
+        self.assertNotIn("白宫", alert)
+        self.assertTrue(alert.startswith("**过去24小时核心变化**"))
+        self.assertIn("[[c:资金转向蓝筹]]", alert)
+        self.assertEqual(ensure_alert_ceiling(content), 0)  # 幂等
+
+    def test_drops_fact_clauses_when_needed_and_fixes_trailing_semicolon(self):
+        content = {"alert": "**过去24小时核心变化**：" + "甲" * 190 + "；" + "乙涨1%" * 20 + "；"}
+        ensure_alert_ceiling(content)
+        self.assertTrue(ALERT_MIN <= visible_text_length(content["alert"]) <= ALERT_MAX)
+        self.assertTrue(content["alert"].endswith("。"))
+
+    def test_never_drops_below_floor_or_first_clause(self):
+        content = {"alert": "**过去24小时核心变化**：" + "甲" * 300 + "。"}
+        self.assertEqual(ensure_alert_ceiling(content), 0)  # 单句无法删，交结构校验
+        content = {"alert": "x" * 200}
+        self.assertEqual(ensure_alert_ceiling(content), 0)
+
+    def test_does_not_split_inside_emphasis_marker(self):
+        content = {"alert": "**过去24小时核心变化**：" + "甲" * 200 + "[[c:乙；丙]]" + "丁" * 70 + "。"}
+        ensure_alert_ceiling(content)
+        self.assertEqual(content["alert"].count("[["), content["alert"].count("]]"))
 
 
 class CompressBulletsTests(unittest.TestCase):

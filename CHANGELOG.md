@@ -1,5 +1,19 @@
 # 变更记录
 
+## 2026-10-10 · 文档对齐实际生产：服务器 DeepSeek 写稿为生产，云端通道暂停；代码同步统一走 GitHub main
+
+- **背景**：GitHub `main`（PR #1–#6）记录的是 09-27 起的「Claude cloud 写稿 + `briefs` 交接 + 服务器 `server_publish.sh` 发布」流程；用户已于 10-09 主动停用云端 Routine，服务器 cron 改回 `run_brief.sh`（DeepSeek 写稿），文档未同步。本机 main 又落后 GitHub 15 个提交，10-10 按旧规则 `git push production main` 时用本机旧代码覆盖了服务器，回退了 PR #2–#6 的改动（新闻池来源分级、美联储情景随事实、「习」简称、RSS CDATA 与重试等）。
+- **改动**：`AGENTS.md` 改写「生产调度」并新增「代码同步」：生产 = 服务器 08:20 `run_brief.sh`；云端通道标注暂停、代码保留、恢复须先停 `run_brief.sh` cron；代码以 GitHub `main` 为唯一权威，走分支 + PR，服务器只用 `server_sync.py` 同步，禁止 `git push production main`（本机已移除该 remote）。`README.md`、`docs/cloud-routine.md`、`server_publish.sh` 头注释同步标注暂停状态；新闻池口径等描述改为以 DeepSeek 通道为准。
+- **顺带修复**：同步后在服务器跑测试发现 `test_news_sources` 1 项失败——服务器 Python 3.10 的 `fromisoformat` 不接受 Reuters sitemap 的短小数秒（`20:00:00.5Z`），这类条目会被静默丢弃（本机 3.14 无此问题）。`fetch_news.py` 新增 `_parse_iso_tz()` 兼容 3.10（补齐小数秒、`Z`→`+00:00`、时区补冒号）。
+- **影响**：文档与流程约定为主；运行逻辑仅上述 Reuters 时间解析修复。服务器已用 `server_sync.py` 恢复到 GitHub 代码，全套测试在服务器 3.10 与本机 3.14 均通过。
+
+## 2026-10-10 · alert 超上限确定性收窄：修复导读反复超长导致自动稿失败
+
+- **线上现象**：`20261010` 08:20 服务器任务失败，飞书报"模型已返回 JSON，但结构/字数/强调色校验未通过"。日志显示 6 次尝试全部卡在 `alert 可见正文应为 180-260 字`（287→268→370→268→306→268），第 1 次另有 `logic_chain.priority` 为空；正文其余部分基本合规。
+- **根因裁决**：DeepSeek 在定向修复轮对 alert 上限反复摆动不收敛，与 09-16 整稿贴上限同类；偏短侧已有 `ensure_length_floors` 补足 alert，但超长侧没有对称兜底。
+- **修复**：`write_brief.py` 新增 `ensure_alert_ceiling()`，在 `post_process` 中先于强调色补齐执行。alert 超 260 字时按 `。！？；` 切分句（不在强调色标记内切分），首句永不删；先从后往前删既无数字也无强调色的分句，仍超限再删含事实的分句，收窄到 ≤245 字且不低于 180 字；末尾残留"；"改为"。"。alert 只是导读，事实在正文板块均有展开，删分句不丢信息。幂等。
+- **验证**：用服务器当日最后一次模型原始输出复测，alert 268→243 字（删去一个无数字分句），alert 校验通过；`test_write_brief.py` 新增 4 项，全套 100 项通过。
+
 ## 2026-09-28 · Bloomberg/CNBC RSS 请求失败时重试一次
 
 - **原因**：修复 CDATA 摘要后本机重跑 `fetch_news.py`，第一次 Bloomberg 整源 0 条（单独请求与第二次重跑均正常，属偶发请求失败）。`fetch_rss()` 失败只打 warn 不重试，一次抖动就会让一级来源整源缺席当期新闻池。

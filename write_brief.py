@@ -655,6 +655,72 @@ def ensure_length_floors(content: dict, min_bullet_chars: dict | None = None) ->
     return changed
 
 
+ALERT_TRIM_TARGET = 245  # 收窄到上限内部而非贴边
+
+
+def _split_alert_clauses(text: str) -> list[str]:
+    """按 。！？； 切分句/分句（保留标点），不在强调色标记内部切分。"""
+    pieces, buf, depth, i = [], "", 0, 0
+    while i < len(text):
+        if text.startswith("[[", i):
+            depth += 1
+            buf += "[["
+            i += 2
+            continue
+        if text.startswith("]]", i) and depth:
+            depth -= 1
+            buf += "]]"
+            i += 2
+            continue
+        ch = text[i]
+        buf += ch
+        i += 1
+        if depth == 0 and ch in "。！？；":
+            pieces.append(buf)
+            buf = ""
+    if buf:
+        pieces.append(buf)
+    return pieces
+
+
+def ensure_alert_ceiling(content: dict) -> int:
+    """alert 超出可见字数上限时，确定性删除末尾方向的分句压回区间，返回删除的分句数。
+
+    2026-10-10 线上事故：DeepSeek 连续 6 次把 alert 写到 268-370 字，修复轮在上限附近
+    来回摆动始终不进 180-260。alert 只是导读，事实在正文板块均有完整展开，故允许删句：
+    首句（"过去24小时核心变化"开头）永不删；优先删既无数字也无强调色的分句，其次从后往前
+    删含事实的分句；结果须 >= ALERT_MIN。末尾若停在"；"则改为"。"。幂等。"""
+    alert = content.get("alert")
+    if not isinstance(alert, str) or visible_text_length(alert) <= ALERT_MAX:
+        return 0
+    keep = _split_alert_clauses(alert)
+    if len(keep) <= 1:
+        return 0
+    removed = 0
+
+    def total():
+        return visible_text_length("".join(k for k in keep if k))
+
+    for allow_fact in (False, True):
+        for j in range(len(keep) - 1, 0, -1):
+            if total() <= ALERT_TRIM_TARGET:
+                break
+            piece = keep[j]
+            if piece is None or (not allow_fact and _sentence_has_fact(piece)):
+                continue
+            if total() - visible_text_length(piece) < ALERT_MIN:
+                continue
+            keep[j] = None
+            removed += 1
+    if not removed:
+        return 0
+    text = "".join(k for k in keep if k).rstrip()
+    if text.endswith("；"):
+        text = text[:-1] + "。"
+    content["alert"] = text
+    return removed
+
+
 def visible_text_length(text: str) -> int:
     """Count reader-visible copy, excluding lightweight formatting syntax."""
     if not isinstance(text, str):
@@ -836,6 +902,9 @@ def post_process(content: dict, snap: dict, pool: list[dict], day: str, date_cn:
     emphasis_trimmed = trim_long_emphasis(content)
     if emphasis_trimmed:
         warnings.append("已将 %d 处超长强调色收窄到 40 字内（不改可见正文）" % emphasis_trimmed)
+    alert_trimmed = ensure_alert_ceiling(content)
+    if alert_trimmed:
+        warnings.append("alert 超出 %d 字上限，已删除 %d 个末尾方向的分句压回区间" % (ALERT_MAX, alert_trimmed))
     floors_filled = ensure_length_floors(content, min_bullet_chars)
     if floors_filled:
         warnings.append("已为 %d 个差几字的 alert/bullet 碎段补足板块专属验证条件" % floors_filled)
