@@ -251,6 +251,16 @@ def _reuters_item(title: str, url: str, published: dt.datetime, summary: str = "
     }
 
 
+def _parse_iso_tz(raw: str) -> dt.datetime:
+    """兼容 Python 3.10 的 ISO 8601 解析：服务器为 3.10，其 fromisoformat 不接受 "Z" 后缀和
+    非 3/6 位小数秒（如 Reuters 的 "20:00:00.5Z"）及无冒号时区，先补齐小数秒到 6 位、"Z" 换成 +00:00、时区补冒号。"""
+    text = raw.strip().replace("Z", "+00:00")
+    text = re.sub(r"\.(\d{1,6})\d*(?=[+-]\d{2}:?\d{2}$|$)",
+                  lambda m: "." + m.group(1).ljust(6, "0"), text)
+    text = re.sub(r"([+-]\d{2})(\d{2})$", r"\1:\2", text)
+    return dt.datetime.fromisoformat(text)
+
+
 def parse_reuters_sitemap(xml_text: str) -> list[tuple[dt.datetime, dict]]:
     """解析一页 news sitemap → [(发布时间, item)]，含被栏目白名单过滤掉的条目时间（用于翻页判停）。"""
     out = []
@@ -259,7 +269,7 @@ def parse_reuters_sitemap(xml_text: str) -> list[tuple[dt.datetime, dict]]:
         raw_date = _tag_text(block, "news:publication_date")
         title = _clean_title(_tag_text(block, "news:title"))
         try:
-            published = dt.datetime.fromisoformat(raw_date.replace("Z", "+00:00"))
+            published = _parse_iso_tz(raw_date)
         except ValueError:
             continue
         if published.tzinfo is None:

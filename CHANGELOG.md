@@ -4,7 +4,8 @@
 
 - **背景**：GitHub `main`（PR #1–#6）记录的是 09-27 起的「Claude cloud 写稿 + `briefs` 交接 + 服务器 `server_publish.sh` 发布」流程；用户已于 10-09 主动停用云端 Routine，服务器 cron 改回 `run_brief.sh`（DeepSeek 写稿），文档未同步。本机 main 又落后 GitHub 15 个提交，10-10 按旧规则 `git push production main` 时用本机旧代码覆盖了服务器，回退了 PR #2–#6 的改动（新闻池来源分级、美联储情景随事实、「习」简称、RSS CDATA 与重试等）。
 - **改动**：`AGENTS.md` 改写「生产调度」并新增「代码同步」：生产 = 服务器 08:20 `run_brief.sh`；云端通道标注暂停、代码保留、恢复须先停 `run_brief.sh` cron；代码以 GitHub `main` 为唯一权威，走分支 + PR，服务器只用 `server_sync.py` 同步，禁止 `git push production main`（本机已移除该 remote）。`README.md`、`docs/cloud-routine.md`、`server_publish.sh` 头注释同步标注暂停状态；新闻池口径等描述改为以 DeepSeek 通道为准。
-- **影响**：仅文档与流程约定，无运行逻辑变化。服务器已用 `server_sync.py` 恢复到 GitHub 代码。
+- **顺带修复**：同步后在服务器跑测试发现 `test_news_sources` 1 项失败——服务器 Python 3.10 的 `fromisoformat` 不接受 Reuters sitemap 的短小数秒（`20:00:00.5Z`），这类条目会被静默丢弃（本机 3.14 无此问题）。`fetch_news.py` 新增 `_parse_iso_tz()` 兼容 3.10（补齐小数秒、`Z`→`+00:00`、时区补冒号）。
+- **影响**：文档与流程约定为主；运行逻辑仅上述 Reuters 时间解析修复。服务器已用 `server_sync.py` 恢复到 GitHub 代码，全套测试在服务器 3.10 与本机 3.14 均通过。
 
 ## 2026-10-10 · alert 超上限确定性收窄：修复导读反复超长导致自动稿失败
 
