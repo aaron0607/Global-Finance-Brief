@@ -57,6 +57,11 @@ class ReaderFontSizeTests(unittest.TestCase):
             [{"date": "10月12日 周一", "event": "20:30 事件", "stars": 3}])
         self.assertIn("font-size:15px", cal)
 
+    def test_calendar_weekday_on_second_line(self):
+        cal = build_brief.render_calendar(
+            [{"date": "10月12日 周一", "event": "20:30 事件", "stars": 3}])
+        self.assertIn("10月12日<br>周一", cal)
+
 
 if __name__ == "__main__":
     unittest.main()
