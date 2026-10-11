@@ -125,6 +125,8 @@ QDII_FUNDS = [
     ("017437", "华宝纳斯达克精选股票(QDII)C"),
     ("017145", "华宝海外新能源汽车股票(QDII)C"),
 ]
+# 全文正文字数硬范围（与 write_brief.HARD_MIN/HARD_MAX 保持一致）
+WORD_MIN, WORD_MAX = 5000, 7000
 QDII_API = "https://fundgz.ndxspx.cn/api/qdii-snapshot"              # 云端常驻接口(首选;2026-07-12 起走 HTTPS 域名,旧 IP:8088 防火墙已封)
 QDII_CACHE = "/tmp/qdii_cache.json"                                   # 本机外部工具写入的易失缓存(/tmp 会被系统清空)
 PROJECT_CACHE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "qdii_cache.json")  # 项目内持久副本(断网兜底)
@@ -379,11 +381,11 @@ def fmt_maxsg(n):
 def qdii_badge(status, maxsg):
     """申购状态 → 彩色 badge。限大额=红, 暂停申购=深红停购, 开放申购=绿不限额。"""
     if status == "暂停申购":
-        return '<span style="font-size:10px;background-color:#7a1f1f;color:#fff;padding:1px 5px;border-radius:3px;font-weight:700;">停购</span>'
+        return '<span style="font-size:12px;background-color:#7a1f1f;color:#fff;padding:1px 5px;border-radius:3px;font-weight:700;">停购</span>'
     if status == "开放申购":
-        return '<span style="font-size:10px;background-color:#2f7d32;color:#fff;padding:1px 5px;border-radius:3px;font-weight:700;">不限额</span>'
+        return '<span style="font-size:12px;background-color:#2f7d32;color:#fff;padding:1px 5px;border-radius:3px;font-weight:700;">不限额</span>'
     # 限大额(默认)
-    return '<span style="font-size:10px;background-color:%s;color:#fff;padding:1px 5px;border-radius:3px;font-weight:700;">限额%s</span>' % (RED, fmt_maxsg(maxsg))
+    return '<span style="font-size:12px;background-color:%s;color:#fff;padding:1px 5px;border-radius:3px;font-weight:700;">限额%s</span>' % (RED, fmt_maxsg(maxsg))
 
 
 def _rows_from_snapshot(d):
@@ -439,19 +441,19 @@ def load_qdii(content):
 DIVIDER = '<p style="border-top:2px solid #2e2e2c;margin:28px 0 20px;"></p>\n'
 
 def section_header(emoji, color, title):
-    return ('<p style="font-size:16px;font-weight:800;color:#1a1a18;border-left:4px solid %s;'
+    return ('<p style="font-size:18px;font-weight:800;color:#1a1a18;border-left:4px solid %s;'
             'padding-left:10px;margin:0 0 12px;">%s %s</p>\n') % (color, emoji, title)
 
 
 def bullet(text, accent):
-    return ('<p style="font-size:14px;line-height:1.9;margin:0 0 8px;">● %s</p>'
+    return ('<p style="font-size:16px;line-height:1.8;margin:0 0 10px;">● %s</p>'
             % md(text, accent))
 
 
 def note_bar(text, kind, accent):
     bg, border, color = NOTE_COLORS.get(kind, NOTE_COLORS["gray"])
     return ('<section style="background-color:%s;border-left:4px solid %s;border-radius:0 8px 8px 0;'
-            'padding:11px 14px;margin:16px 0 4px;"><span style="display:block;font-size:13px;color:%s;'
+            'padding:12px 14px;margin:16px 0 4px;"><span style="display:block;font-size:15px;color:%s;'
             'font-weight:600;line-height:1.7;">💡 <strong>逻辑快读：</strong>%s</span></section>'
             % (bg, border, color, md(text, accent)))
 
@@ -470,7 +472,7 @@ def render_section(sec):
 
 
 def render_index_table(label, rows, price_label="收盘价"):
-    out = ['<table style="width:100%;border-collapse:collapse;font-size:13px;margin:0 0 12px;">',
+    out = ['<table style="width:100%;border-collapse:collapse;font-size:15px;margin:0 0 12px;">',
            '<tr><td width="40%%" style="background-color:#1a1a18;color:#f5f4f0;font-weight:700;padding:8px 10px;">%s</td>'
            '<td width="28%%" style="background-color:#1a1a18;color:#f5f4f0;font-weight:700;padding:8px 10px;">%s</td>'
            '<td width="32%%" style="background-color:#1a1a18;color:#f5f4f0;font-weight:700;padding:8px 10px;">涨跌幅</td></tr>' % (label, price_label)]
@@ -486,8 +488,8 @@ def render_index_table(label, rows, price_label="收盘价"):
 
 
 def render_commodity_table(label, rows):
-    out = ['<table style="width:100%;border-collapse:collapse;font-size:13px;margin:0 0 20px;">',
-           '<tr><td width="40%%" style="background-color:#3a3835;color:#f5f4f0;font-weight:700;padding:8px 10px;">大宗 / 外汇（%s）</td>'
+    out = ['<table style="width:100%;border-collapse:collapse;font-size:15px;margin:0 0 20px;">',
+           '<tr><td width="40%%" style="background-color:#3a3835;color:#f5f4f0;font-weight:700;padding:8px 10px;word-break:keep-all;">大宗 / 外汇（%s）</td>'
            '<td width="28%%" style="background-color:#3a3835;color:#f5f4f0;font-weight:700;padding:8px 10px;">价格</td>'
            '<td width="32%%" style="background-color:#3a3835;color:#f5f4f0;font-weight:700;padding:8px 10px;">涨跌</td></tr>' % label]
     for (name, bg), r in zip(COMMODITY_ROWS, rows):
@@ -503,34 +505,34 @@ def render_commodity_table(label, rows):
 def render_logic(lc):
     parts = []
     for p in lc["paths"]:
-        sub = ('<br><span style="color:%s;font-size:12px;">%s</span>' % (p["color"], md(p["sub"], p["color"]))) if p.get("sub") else ""
+        sub = ('<br><span style="color:%s;font-size:15px;">%s</span>' % (p["color"], md(p["sub"], p["color"]))) if p.get("sub") else ""
         parts.append('<strong style="color:%s;">%s</strong><br>%s%s'
                      % (p["color"], p["name"], md(p["body"], p["color"]), sub))
     body = "<br><br>".join(parts)
     if lc.get("priority"):
-        body += '<br><br><span style="font-size:12px;color:#888;">%s</span>' % md(lc["priority"])
+        body += '<br><br><span style="font-size:13px;color:#888;">%s</span>' % md(lc["priority"])
     return ('<section style="background-color:#f5f4f0;border-radius:8px;padding:14px 16px;margin:0 0 20px;">'
-            '<span style="display:block;font-size:13px;line-height:2.2;color:#1a1a18;">%s</span></section>' % body)
+            '<span style="display:block;font-size:15px;line-height:1.9;color:#1a1a18;">%s</span></section>' % body)
 
 
 def render_calendar(rows):
-    out = ['<table style="width:100%;border-collapse:collapse;font-size:13px;margin:0 0 20px;table-layout:fixed;">',
-           '<tr><td width="100" style="background-color:#1a1a18;color:#f5f4f0;font-weight:700;padding:8px 10px;white-space:nowrap;word-break:keep-all;">日期</td>'
+    out = ['<table style="width:100%;border-collapse:collapse;font-size:15px;margin:0 0 20px;table-layout:fixed;">',
+           '<tr><td width="104" style="background-color:#1a1a18;color:#f5f4f0;font-weight:700;padding:8px 6px;white-space:nowrap;word-break:keep-all;">日期</td>'
            '<td style="background-color:#1a1a18;color:#f5f4f0;font-weight:700;padding:8px 10px;">事件</td>'
-           '<td width="60" style="background-color:#1a1a18;color:#f5f4f0;font-weight:700;padding:8px 10px;text-align:center;">重要性</td></tr>']
+           '<td width="72" style="background-color:#1a1a18;color:#f5f4f0;font-weight:700;padding:8px 2px;text-align:center;">重要性</td></tr>']
     for i, r in enumerate(rows):
         bg = "#fff" if i % 2 == 0 else "#fafafa"
         stars = "⭐" * int(r.get("stars", 1))
-        out.append('<tr><td style="padding:8px 10px;background-color:%s;white-space:nowrap;word-break:keep-all;">%s</td>'
+        out.append('<tr><td style="padding:8px 6px;background-color:%s;white-space:nowrap;word-break:keep-all;">%s</td>'
                    '<td style="padding:8px 10px;background-color:%s;">%s</td>'
-                   '<td style="padding:8px 10px;background-color:%s;text-align:center;">%s</td></tr>'
+                   '<td style="padding:8px 2px;background-color:%s;text-align:center;font-size:11px;">%s</td></tr>'
                    % (bg, r["date"], bg, r["event"], bg, stars))
     out.append('</table>')
     return "\n".join(out)
 
 
 def render_qdii_table(rows):
-    out = ['<table style="width:100%;border-collapse:collapse;font-size:13px;margin:0 0 8px;border:1px solid #ece9e2;">']
+    out = ['<table style="width:100%;border-collapse:collapse;font-size:15px;margin:0 0 8px;border:1px solid #ece9e2;">']
     n = len(QDII_FUNDS)
     for i, ((code, name), r) in enumerate(zip(QDII_FUNDS, rows)):
         bg = "#fff" if i % 2 == 0 else "#fafafa"
@@ -540,7 +542,7 @@ def render_qdii_table(rows):
         pct = r["pct"]; col = pct_color(pct)
         badge = qdii_badge(r.get("status", "限大额"), r.get("maxsg", 0))
         out.append('<tr><td style="padding:9px 10px;%sbackground-color:%s;%s">%s<br>'
-                   '<span style="font-size:10px;background-color:#f0eee5;color:#666;padding:1px 5px;border-radius:3px;font-weight:700;">%s</span> %s</td>'
+                   '<span style="font-size:12px;background-color:#f0eee5;color:#666;padding:1px 5px;border-radius:3px;font-weight:700;">%s</span> %s</td>'
                    '<td style="padding:9px 10px;%sbackground-color:%s;text-align:right;color:%s;font-weight:700;%s">%s</td></tr>'
                    % (border, bg, width_l, name, code, badge, border, bg, col, width_r, pct))
     out.append('</table>')
@@ -588,15 +590,15 @@ def build(content):
 
 <div id="article">
 
-<p style="text-align:center;font-size:11px;color:#bbb;letter-spacing:.8px;margin:0 0 10px;">股市马斯克 出品 · 美股 · 黄金 · 财经深度资讯</p>
+<p style="text-align:center;font-size:12px;color:#bbb;letter-spacing:.8px;margin:0 0 10px;">股市马斯克 出品 · 美股 · 黄金 · 财经深度资讯</p>
 
-<h1 style="font-size:18px;font-weight:800;color:#1a1a18;line-height:1.5;margin:0 0 10px;text-align:center;">{content['main_title']}</h1>
+<h1 style="font-size:20px;font-weight:800;color:#1a1a18;line-height:1.5;margin:0 0 10px;text-align:center;">{content['main_title']}</h1>
 
-<p style="text-align:center;font-size:11px;color:#bbb;margin:0 0 24px;letter-spacing:.3px;">{content['date_cn']} · 过去24小时财经简报</p>
+<p style="text-align:center;font-size:12px;color:#bbb;margin:0 0 24px;letter-spacing:.3px;">{content['date_cn']} · 过去24小时财经简报</p>
 
-<section style="background-color:#FCEBEB;border-left:4px solid {RED};border-radius:0 8px 8px 0;padding:12px 14px;margin:0 0 22px;"><span style="display:block;font-size:13px;color:{RED};font-weight:600;line-height:1.7;">🚨 <strong style="color:{RED};">最新（北京时间{alert_display_time}）：</strong>{md(content['alert'])}</span></section>
+<section style="background-color:#FCEBEB;border-left:4px solid {RED};border-radius:0 8px 8px 0;padding:12px 14px;margin:0 0 22px;"><span style="display:block;font-size:15px;color:{RED};font-weight:600;line-height:1.75;">🚨 <strong style="color:{RED};">最新（北京时间{alert_display_time}）：</strong>{md(content['alert'])}</span></section>
 
-{DIVIDER}<p style="font-size:16px;font-weight:800;color:#1a1a18;border-left:4px solid {RED};padding-left:10px;margin:0 0 12px;">📊 行情总览</p>
+{DIVIDER}<p style="font-size:18px;font-weight:800;color:#1a1a18;border-left:4px solid {RED};padding-left:10px;margin:0 0 12px;">📊 行情总览</p>
 
 {indices}
 
@@ -604,21 +606,21 @@ def build(content):
 
 {index_note}{sections}
 
-{DIVIDER}<p style="font-size:16px;font-weight:800;color:#1a1a18;border-left:4px solid #1a1a18;padding-left:10px;margin:0 0 12px;">🧠 核心逻辑框架 | 当日因果传导链</p>
+{DIVIDER}<p style="font-size:18px;font-weight:800;color:#1a1a18;border-left:4px solid #1a1a18;padding-left:10px;margin:0 0 12px;">🧠 核心逻辑框架 | 当日因果传导链</p>
 {logic}
 
-{DIVIDER}<p style="font-size:16px;font-weight:800;color:#1a1a18;border-left:4px solid #1a1a18;padding-left:10px;margin:0 0 12px;">📅 本周财经日历</p>
+{DIVIDER}<p style="font-size:18px;font-weight:800;color:#1a1a18;border-left:4px solid #1a1a18;padding-left:10px;margin:0 0 12px;">📅 本周财经日历</p>
 {calendar}
 
-{DIVIDER}<p style="font-size:16px;font-weight:800;color:#1a1a18;border-left:4px solid {GOLD};padding-left:10px;margin:0 0 4px;">📈 QDII 基金净值估算</p>
-<p style="font-size:12px;color:#999;margin:0 0 10px;">{content['qdii_date_label']}</p>
+{DIVIDER}<p style="font-size:18px;font-weight:800;color:#1a1a18;border-left:4px solid {GOLD};padding-left:10px;margin:0 0 4px;">📈 QDII 基金净值估算</p>
+<p style="font-size:13px;color:#999;margin:0 0 10px;">{content['qdii_date_label']}</p>
 
 {qdii}
 
-<p style="font-size:11px;color:#999;line-height:1.6;margin:6px 0 20px;">⚠️ 以上为基于结构化行情与公开基金数据的估算结果，非实际净值，仅供参考；实际净值以各基金公司官方公告为准。数据来源：{PUBLIC_DATA_SOURCES}</p>
+<p style="font-size:12px;color:#999;line-height:1.6;margin:6px 0 20px;">⚠️ 以上为基于结构化行情与公开基金数据的估算结果，非实际净值，仅供参考；实际净值以各基金公司官方公告为准。数据来源：{PUBLIC_DATA_SOURCES}</p>
 
 <p style="border-top:1px solid #ece9e2;margin:28px 0 16px;"></p>
-<p style="text-align:center;font-size:12px;color:#bbb;line-height:2.4;">东财·雪球·支付宝·富途：<strong style="color:#333;font-size:14px;">股市马斯克</strong><br>微信公众号：<strong style="color:#333;font-size:14px;">中签课代表</strong><br>理财通：<strong style="color:#333;font-size:14px;">觉醒年代</strong></p>
+<p style="text-align:center;font-size:13px;color:#bbb;line-height:2.2;">东财·雪球·支付宝·富途：<strong style="color:#333;font-size:16px;">股市马斯克</strong><br>微信公众号：<strong style="color:#333;font-size:16px;">中签课代表</strong><br>理财通：<strong style="color:#333;font-size:16px;">觉醒年代</strong></p>
 
 </div>
 </body>
@@ -773,7 +775,7 @@ def main():
     out = sys.argv[2] if len(sys.argv) > 2 else "wechat_article_%s.html" % content["date_yyyymmdd"]
     open(out, "w", encoding="utf-8").write(html)
     n = count_chars(html)
-    flag = "✅ 达标" if 6000 <= n <= 7000 else ("⚠️ 偏少需扩充" if n < 6000 else "⚠️ 超限需精简")
+    flag = "✅ 达标" if WORD_MIN <= n <= WORD_MAX else ("⚠️ 偏少需扩充" if n < WORD_MIN else "⚠️ 超限需精简")
     print("已生成: %s" % out)
     SRC_LABEL = {
         "api":     "云端接口 /api/qdii-snapshot",
@@ -789,16 +791,16 @@ def main():
     print("成稿终检: %s" % final_qa_status)
     print("新闻时效窗口: %s" % freshness_status)
     print("QDII 数据来源: %s%s" % (label, " (data_date=%s)" % cache_date if cache_date else ""))
-    print("正文字符数(去标签): %d  → %s  [硬约束 6000-7000]" % (n, flag))
+    print("正文字符数(去标签): %d  → %s  [硬约束 %d-%d]" % (n, flag, WORD_MIN, WORD_MAX))
     parts = section_counts(content)
     print("分段字数: " + " | ".join("%s %d" % p for p in parts))
-    if n > 7000:
-        over = n - 7000
+    if n > WORD_MAX:
+        over = n - WORD_MAX
         top = sorted((p for p in parts if p[0] not in ("calendar",)), key=lambda x: -x[1])[:3]
         hint = "、".join("%s(约-%d)" % (t[0], round(over * t[1] / sum(x[1] for x in top))) for t in top)
         print("→ 需精简约 %d 字，建议按占比砍: %s，一次砍到位后重跑" % (over, hint))
-    elif n < 6000:
-        print("→ 需扩充约 %d 字，优先加 ai_tech / focus 正文" % (6000 - n))
+    elif n < WORD_MIN:
+        print("→ 需扩充约 %d 字，优先加 ai_tech / focus 正文" % (WORD_MIN - n))
 
 
 if __name__ == "__main__":

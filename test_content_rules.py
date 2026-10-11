@@ -42,5 +42,21 @@ class NameAbbreviationTests(unittest.TestCase):
             self.assertEqual(json.loads(path.read_text(encoding="utf-8"))["alert"], "习")
 
 
+class ReaderFontSizeTests(unittest.TestCase):
+    """正文可读性：段落 16px，逻辑快读/表格/导读不低于 15px。"""
+
+    def test_bullet_and_note_sizes(self):
+        self.assertIn("font-size:16px", build_brief.bullet("测试正文。", "#000000"))
+        self.assertIn("font-size:15px", build_brief.note_bar("测试。", "red", "#000000"))
+
+    def test_tables_not_below_15px(self):
+        row = {"price": "1", "chg": "+1%", "dir": "up"}
+        html = build_brief.render_index_table("标签", [row] * len(build_brief.INDEX_NAMES))
+        self.assertIn("font-size:15px", html)
+        cal = build_brief.render_calendar(
+            [{"date": "10月12日 周一", "event": "20:30 事件", "stars": 3}])
+        self.assertIn("font-size:15px", cal)
+
+
 if __name__ == "__main__":
     unittest.main()

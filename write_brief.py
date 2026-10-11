@@ -37,8 +37,9 @@ BRIEF_TZ = ZoneInfo("Asia/Shanghai")
 API_URL = "https://api.deepseek.com/chat/completions"
 MODEL = os.environ.get("DEEPSEEK_MODEL", "deepseek-chat")
 MAX_ATTEMPTS = 6
-TARGET_MIN, TARGET_MAX = 6300, 6600
-HARD_MIN, HARD_MAX = 6000, 7000
+# 2026-10-11：硬下限 6000→5000、目标 6300-6600→5500-6200；上限 7000 不变。
+TARGET_MIN, TARGET_MAX = 5500, 6200
+HARD_MIN, HARD_MAX = 5000, 7000
 WEEKDAYS = ("周一", "周二", "周三", "周四", "周五", "周六", "周日")
 NEWS_CAP = 100
 # 新闻池来源分级：1=海外一手媒体（优先入池）、2=国内实时快讯、3=国内聚合热榜；未登记来源按 3 级。
@@ -81,7 +82,7 @@ BULLET_RULES = {
     "commodity": (2, 2),
 }
 # 单段硬底线只拦截失去论证性的碎段；更高的目标长度由提示词与整稿
-# 6000-7000 字硬校验共同约束。否则模型会把全部重试浪费在补十几个字，
+# 5000-7000 字硬校验共同约束。否则模型会把全部重试浪费在补十几个字，
 # 反而没有机会修正真正重要的整稿篇幅。
 MIN_BULLET_CHARS = {
     "focus": 100,
@@ -95,7 +96,7 @@ MIN_BULLET_CHARS = {
 # 正常档沿用上面的常量。淡日=美股休市/长假后首日（隔夜无新成交、过夜新闻偏少），
 # 此时放宽整稿字数下限与 ai_tech 条数下限，避免模型为凑字注水或整篇被判死。
 # ACCEPT_MIN：降级放行下限——结构/时效/日历/强调色全过、build rc=0，仅整稿略短于硬下限时接受。
-ACCEPT_MIN = 5500
+ACCEPT_MIN = 4500
 
 NORMAL_PROFILE = {
     "thin": False,
@@ -107,9 +108,9 @@ NORMAL_PROFILE = {
 }
 THIN_PROFILE = {
     "thin": True,
-    "target_min": 5800, "target_max": 6300,
-    "hard_min": 5500, "hard_max": HARD_MAX,
-    "accept_min": 5200,
+    "target_min": 5000, "target_max": 5700,
+    "hard_min": 4500, "hard_max": HARD_MAX,
+    "accept_min": 4200,
     "bullet_rules": {**BULLET_RULES, "ai_tech": (3, 5)},
     "min_bullet_chars": {sid: 90 for sid in MIN_BULLET_CHARS},
 }
@@ -458,8 +459,8 @@ def build_prompt(snap: dict, pool: list[dict], day: str, date_cn: str, alert_tim
 10. **时效铁律**：以最近 12 小时为主体、24 小时为上限；**已公布数据（CPI/PPI/NFP 等）不得作为头条/alert 的"最新"事件**，只能作背景引用或列入 calendar 的待发布项；宏观板块须以当日最新角度开篇（利率定价/官员表态/当日数据/前瞻窗口）。**未来日期严禁凭记忆填写**：正文提到的未来数据/事件日期只能来自【本周财经日历】或【新闻池】原文；calendar 字段留空数组，由脚本用结构化日历源回填。
 11. **海外一手媒体优先**：新闻池中 Bloomberg/Reuters/CNBC 为海外一手媒体（英文原文须准确译成中文，公司名、人名、机构名用通行中文译名）。同一事件多源报道时，事实表述、数字、时间以海外一手媒体为准；国内快讯/热榜与之冲突时采用海外一手版本，国内来源只补充 A 股/港股/国内政策视角。来源名仅用于核对，正文仍不得出现来源转述。
 12. **头号焦点优先级**：AI大模型发布/重大突破 > 芯片/半导体重大事件 > 科技巨头财报 > CEO重磅发言 > 宏观政策 > 地缘（仅战争升级/停火/制裁重大变化级别）。
-13. 字数（最重要）：渲染后正文目标 **{tmin}-{tmax} 字**，硬范围 {hmin}-{hmax}。不要靠增加碎段凑字。**focus 每段 280-360 字，ai_tech 每段 270-350 字，stock_rotation/iran/macro 每段 230-310 字，commodity 两段各 250-320 字**；这里指去掉 `[[c:]]`、`[[red:]]`、`[[green:]]` 和 `**` 后读者实际看到的字数。每段通常 3-5 句，内部顺序为“事实与数字→市场反应/交叉验证→传导逻辑→风险或验证条件”。alert 可见正文 180-240 字，logic_chain 合计 450-650 字，note 40-90 字。无 iran 时，把缺口集中补进 focus 与 ai_tech 的新增论证段。
-14. **编辑感铁律**：板块标题必须写出本节核心矛盾或结论，格式为“板块名 | 结论/反差”，不能只是罗列新闻名词；段落之间用事实推进。同一事实只在最相关板块完整展开，其他板块只写其新增含义，禁止重复背景、万能结论和“短线波动不改长期趋势”式套话。
+13. 字数（最重要）：渲染后正文目标 **{tmin}-{tmax} 字**，硬范围 {hmin}-{hmax}。不要靠增加碎段凑字。**focus 每段 260-340 字，ai_tech 每段 250-330 字，stock_rotation/iran/macro 每段 210-290 字，commodity 两段各 230-300 字**；这里指去掉 `[[c:]]`、`[[red:]]`、`[[green:]]` 和 `**` 后读者实际看到的字数。每段通常 3-5 句，内部顺序为“事实与数字→市场反应/交叉验证→传导逻辑→风险或验证条件”。alert 可见正文 180-240 字，logic_chain 合计 400-600 字，note 40-90 字。无 iran 时，把缺口集中补进 focus 与 ai_tech 的新增论证段。
+14. **编辑感铁律**：板块标题必须写出本节核心矛盾或结论，格式为“板块名 | 结论/反差”，不能只是罗列新闻名词；段落之间用事实推进。同一事实只在最相关板块完整展开，其他板块只写其新增含义，禁止重复背景、万能结论和“短线波动不改长期趋势”式套话。**头号焦点与后文不得重复**：focus 只讲当天定价权重最高的那一件事并讲透；focus 里出现过的公司+数字（金额、涨跌幅、指数点位、持仓/订单规模），ai_tech/stock_rotation/macro/iran/commodity 不得再次叙述，只允许写该事件在本板块的增量含义（产业链位置、机构观点、反方风险）或改写其他独有事实；alert 是全文摘要不受此限。ai_tech 应优先选择 focus 没有覆盖的算力/存储/云资本开支/政策等其他事件展开。
 {thin_block}
 【日期与标识】（照抄以下值）
 - date_yyyymmdd = "{day}"
@@ -503,6 +504,8 @@ def build_repair_prompt(content: dict, feedback: str, pool: list[dict], day: str
 7. 正文事实只能来自下方新闻池或上一版已有内容；禁止出现“据XX报道”“据报道”“有报道称”、“新闻池”、“行情快照”、“脚本”等客户不可见表述。
 8. 以下标识必须原样使用：date_yyyymmdd={day}；date_cn={date_cn}；as_of={as_of}；alert_time={alert_time}；index_note={index_note}；qdii_date_label={qdii_label}。禁止输出 indices/commodities。
 9. 若反馈涉及强调色，只在原有事实中圈选短语加标记，不改写或新增事实：每条 bullet 至少 1 处，focus/ai_tech 合计至少为 bullet 数的 2 倍，alert 至少 2 处；red=上涨/改善/利多，green=下跌/恶化/利空，c=关键事实/机构观点/结论/验证条件；单处不超过 40 字，禁止整段着色，**粗体**不计数。
+
+10. 若反馈指出“头号焦点与后文重复”，focus 保持原样不动；只改写反馈点名的后文句子：删除重复事实，或只写其在该板块的增量含义，或换成新闻池里该板块独有的其他事实（不得编造）。改写后保持该 bullet 的字数不低于最低值。
 
 【校验反馈】
 {feedback}
@@ -1141,6 +1144,74 @@ def ensure_main_title(content: dict, snap: dict, pool: list[dict]) -> str | None
     return "main_title 单独修复未通过，已使用行情兜底：%s → %s" % (original, fallback)
 
 
+# 头号焦点与后文重复：focus 把当天最大事件讲透，其他板块出现同一事件只写增量含义。
+# 句级检测：两句共享辨识度数字且中文双字重合 >= OVERLAP_MIN_BIGRAMS，视为同一事实复述。
+_FACT_NUM_RE = re.compile(r"(\d[\d,]*(?:\.\d+)?)(万亿|亿|万|%|点|美元|倍)?(?![\d年月日号时分周])")
+OVERLAP_MIN_BIGRAMS = 5
+OVERLAP_BLOCK_MIN = 2  # 累计复述 >= 2 句才要求重写
+OVERLAP_SOFT_FROM = MAX_ATTEMPTS - 1  # 最后两轮只告警不拦截，避免去重把整条流水线卡死
+
+
+def _plain(text: str) -> str:
+    text = re.sub(r"\[\[(?:red|green|c):(.+?)\]\]", r"\1", text or "")
+    return text.replace("**", "")
+
+
+def _fact_numbers(sentence: str) -> set[str]:
+    """句中有辨识度的数字：小数、>=3 位数、带亿/万亿/万的金额（日期、年份、个位数不计）。"""
+    tokens = set()
+    for digits, unit in _FACT_NUM_RE.findall(sentence):
+        digits = digits.replace(",", "")
+        if "." in digits or len(digits) >= 3 or unit in ("亿", "万亿", "万"):
+            tokens.add(digits + unit)
+    return tokens
+
+
+def focus_overlap_hits(content: dict) -> list[tuple[int, str, str, int, str]]:
+    """返回 (focus 段序号, focus 原句, 重复所在板块 id, 该板块段序号, 重复句)，每个 focus 句每板块最多一条。"""
+    sections = [s for s in content.get("sections", []) if isinstance(s, dict)]
+    focus = next((s for s in sections if s.get("id") == "focus"), None)
+    if not focus:
+        return []
+    others = [s for s in sections if s.get("id") != "focus"]
+    hits = []
+    for f_index, bullet in enumerate(focus.get("bullets") or [], 1):
+        if not isinstance(bullet, str):
+            continue
+        for f_sent in _split_sentences(_plain(bullet)):
+            f_nums = _fact_numbers(f_sent)
+            if not f_nums:
+                continue
+            f_grams = _bigrams(f_sent)
+            for sec in others:
+                found = False
+                for o_index, o_bullet in enumerate(sec.get("bullets") or [], 1):
+                    if not isinstance(o_bullet, str):
+                        continue
+                    for o_sent in _split_sentences(_plain(o_bullet)):
+                        if (f_nums & _fact_numbers(o_sent)
+                                and len(f_grams & _bigrams(o_sent)) >= OVERLAP_MIN_BIGRAMS):
+                            hits.append((f_index, f_sent, str(sec.get("id")), o_index, o_sent))
+                            found = True
+                            break
+                    if found:
+                        break
+    return hits
+
+
+def focus_overlap_errors(content: dict) -> list[str]:
+    hits = focus_overlap_hits(content)
+    if len(hits) < OVERLAP_BLOCK_MIN:  # 偶发 1 处（如同一价位被引用）放行，避免为去重耗尽修复轮次
+        return []
+    details = []
+    for f_index, f_sent, sid, o_index, o_sent in hits[:4]:
+        details.append("focus 第%d段「%s」与 %s 第%d段「%s」复述同一事实"
+                       % (f_index, f_sent[:36], sid, o_index, o_sent[:36]))
+    return ["头号焦点与后文重复（共 %d 处）：%s。保留 focus 原文不动，改写后文对应句："
+            "删除该事实，或只写该事件在本板块的增量含义（产业链/机构观点/反方风险），"
+            "或换成新闻池里本板块独有的其他事实" % (len(hits), "；".join(details))]
+
+
 def validate_required(content: dict, day: str, bullet_rules: dict | None = None,
                       min_bullet_chars: dict | None = None) -> list[str]:
     bullet_rules = bullet_rules or BULLET_RULES
@@ -1360,6 +1431,13 @@ def main() -> int:
                                 qdii_label, calendar_events, profile["min_bullet_chars"])
         candidate = content
         errors = validate_required(content, day, profile["bullet_rules"], profile["min_bullet_chars"])
+        if not errors:
+            overlap = focus_overlap_errors(content)
+            if overlap and attempt < OVERLAP_SOFT_FROM:
+                errors = overlap
+            elif overlap:
+                warnings.append(overlap[0])
+                print("  ⚠️ " + overlap[0], file=sys.stderr)
         if errors:
             feedback = "上次输出不完整：" + "；".join(errors)
             print("  结构校验失败：" + "；".join(errors), file=sys.stderr)
