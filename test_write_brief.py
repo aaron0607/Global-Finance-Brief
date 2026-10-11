@@ -16,6 +16,8 @@ from write_brief import (
     compress_bullets,
     ensure_alert_ceiling,
     filter_stale_and_vague,
+    focus_overlap_errors,
+    focus_overlap_hits,
     is_stale_rehash,
     vague_subject_hits,
     ensure_length_floors,
@@ -612,6 +614,58 @@ class CompressBulletsTests(unittest.TestCase):
     def test_short_bullet_untouched(self):
         content = {"sections": [{"id": "macro", "bullets": ["只有一句话的短段。"]}]}
         self.assertEqual(compress_bullets(content, 50, MIN_BULLET_CHARS), 0)
+
+
+class FocusOverlapTests(unittest.TestCase):
+    FOCUS = [
+        "高通宣布向亚马逊发行价值40亿美元的认股权证，涉及AI推理芯片和1.6T光连接技术，直接挑战英伟达的主导地位。",
+        "英伟达内部人士出售2.36亿美元股票，可能暗示短期估值压力，但期权市场成交活跃。",
+    ]
+
+    def _content(self, ai_bullets, macro_bullets=("美联储官员表态偏鹰，利率期货定价年内不降息概率上升。",)):
+        return {"sections": [
+            {"id": "focus", "bullets": list(self.FOCUS)},
+            {"id": "ai_tech", "bullets": list(ai_bullets)},
+            {"id": "macro", "bullets": list(macro_bullets)},
+        ]}
+
+    def test_detects_restated_facts_with_markup(self):
+        content = self._content([
+            "[[red:高通宣布向亚马逊发行价值40亿美元的认股权证]]，涉及AI推理芯片和1.6T光连接技术，被视为直接挑战英伟达。",
+            "英伟达内部人士出售2.36亿美元股票，但**期权市场**成交活跃，显示多空博弈。",
+        ])
+        hits = focus_overlap_hits(content)
+        self.assertEqual([(h[0], h[2], h[3]) for h in hits], [(1, "ai_tech", 1), (2, "ai_tech", 2)])
+        self.assertEqual(len(focus_overlap_errors(content)), 1)
+
+    def test_incremental_angle_passes(self):
+        content = self._content([
+            "光模块与CPO链条的订单能见度延伸至2027年，中际旭创、新易盛的800G产能利用率维持高位。",
+            "摩根士丹利维持存储板块增持评级，认为HBM供给紧张在2028年前难以缓解。",
+        ])
+        self.assertEqual(focus_overlap_hits(content), [])
+        self.assertEqual(focus_overlap_errors(content), [])
+
+    def test_single_incidental_hit_not_blocked(self):
+        content = self._content([
+            "高通宣布向亚马逊发行价值40亿美元的认股权证，涉及AI推理芯片和1.6T光连接技术，直接挑战英伟达的主导地位。",
+            "摩根士丹利维持存储板块增持评级，认为HBM供给紧张在2028年前难以缓解。",
+        ])
+        self.assertEqual(len(focus_overlap_hits(content)), 1)
+        self.assertEqual(focus_overlap_errors(content), [])
+
+    def test_dates_and_years_are_not_fact_numbers(self):
+        content = self._content(["9月8日起，到2028年前的供给格局，英伟达与高通的主导地位将直接受到挑战。"])
+        self.assertEqual(focus_overlap_hits(content), [])
+
+    def test_prompts_carry_dedup_rule(self):
+        self.assertIn("头号焦点与后文不得重复", _prompt_text())
+
+
+def _prompt_text():
+    import write_brief
+    import inspect
+    return inspect.getsource(write_brief.build_prompt)
 
 
 if __name__ == "__main__":
