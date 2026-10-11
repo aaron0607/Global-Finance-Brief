@@ -517,7 +517,7 @@ def render_logic(lc):
 
 def render_calendar(rows):
     out = ['<table style="width:100%;border-collapse:collapse;font-size:15px;margin:0 0 20px;table-layout:fixed;">',
-           '<tr><td width="104" style="background-color:#1a1a18;color:#f5f4f0;font-weight:700;padding:8px 6px;white-space:nowrap;word-break:keep-all;">日期</td>'
+           '<tr><td width="84" style="background-color:#1a1a18;color:#f5f4f0;font-weight:700;padding:8px 6px;white-space:nowrap;word-break:keep-all;">日期</td>'
            '<td style="background-color:#1a1a18;color:#f5f4f0;font-weight:700;padding:8px 10px;">事件</td>'
            '<td width="72" style="background-color:#1a1a18;color:#f5f4f0;font-weight:700;padding:8px 2px;text-align:center;">重要性</td></tr>']
     for i, r in enumerate(rows):
@@ -526,7 +526,7 @@ def render_calendar(rows):
         out.append('<tr><td style="padding:8px 6px;background-color:%s;white-space:nowrap;word-break:keep-all;">%s</td>'
                    '<td style="padding:8px 10px;background-color:%s;">%s</td>'
                    '<td style="padding:8px 2px;background-color:%s;text-align:center;font-size:11px;">%s</td></tr>'
-                   % (bg, r["date"], bg, r["event"], bg, stars))
+                   % (bg, r["date"].replace(" ", "<br>", 1), bg, r["event"], bg, stars))
     out.append('</table>')
     return "\n".join(out)
 
