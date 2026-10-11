@@ -125,6 +125,8 @@ QDII_FUNDS = [
     ("017437", "华宝纳斯达克精选股票(QDII)C"),
     ("017145", "华宝海外新能源汽车股票(QDII)C"),
 ]
+# 全文正文字数硬范围（与 write_brief.HARD_MIN/HARD_MAX 保持一致）
+WORD_MIN, WORD_MAX = 5000, 7000
 QDII_API = "https://fundgz.ndxspx.cn/api/qdii-snapshot"              # 云端常驻接口(首选;2026-07-12 起走 HTTPS 域名,旧 IP:8088 防火墙已封)
 QDII_CACHE = "/tmp/qdii_cache.json"                                   # 本机外部工具写入的易失缓存(/tmp 会被系统清空)
 PROJECT_CACHE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "qdii_cache.json")  # 项目内持久副本(断网兜底)
@@ -773,7 +775,7 @@ def main():
     out = sys.argv[2] if len(sys.argv) > 2 else "wechat_article_%s.html" % content["date_yyyymmdd"]
     open(out, "w", encoding="utf-8").write(html)
     n = count_chars(html)
-    flag = "✅ 达标" if 6000 <= n <= 7000 else ("⚠️ 偏少需扩充" if n < 6000 else "⚠️ 超限需精简")
+    flag = "✅ 达标" if WORD_MIN <= n <= WORD_MAX else ("⚠️ 偏少需扩充" if n < WORD_MIN else "⚠️ 超限需精简")
     print("已生成: %s" % out)
     SRC_LABEL = {
         "api":     "云端接口 /api/qdii-snapshot",
@@ -789,16 +791,16 @@ def main():
     print("成稿终检: %s" % final_qa_status)
     print("新闻时效窗口: %s" % freshness_status)
     print("QDII 数据来源: %s%s" % (label, " (data_date=%s)" % cache_date if cache_date else ""))
-    print("正文字符数(去标签): %d  → %s  [硬约束 6000-7000]" % (n, flag))
+    print("正文字符数(去标签): %d  → %s  [硬约束 %d-%d]" % (n, flag, WORD_MIN, WORD_MAX))
     parts = section_counts(content)
     print("分段字数: " + " | ".join("%s %d" % p for p in parts))
-    if n > 7000:
-        over = n - 7000
+    if n > WORD_MAX:
+        over = n - WORD_MAX
         top = sorted((p for p in parts if p[0] not in ("calendar",)), key=lambda x: -x[1])[:3]
         hint = "、".join("%s(约-%d)" % (t[0], round(over * t[1] / sum(x[1] for x in top))) for t in top)
         print("→ 需精简约 %d 字，建议按占比砍: %s，一次砍到位后重跑" % (over, hint))
-    elif n < 6000:
-        print("→ 需扩充约 %d 字，优先加 ai_tech / focus 正文" % (6000 - n))
+    elif n < WORD_MIN:
+        print("→ 需扩充约 %d 字，优先加 ai_tech / focus 正文" % (WORD_MIN - n))
 
 
 if __name__ == "__main__":

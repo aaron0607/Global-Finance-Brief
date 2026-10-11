@@ -51,7 +51,7 @@
 1. 代码：进入该仓库工作副本（当前目录没有就 git clone https://github.com/aaron0607/Global-Finance-Brief 并进入），执行 git fetch origin main briefs && git checkout --detach origin/main。DAY 为北京时间当天 YYYYMMDD（TZ=Asia/Shanghai date +%Y%m%d）。
 2. 通读 AGENTS.md 全文和 content_template.json，之后严格按 AGENTS.md 执行。
 3. 运行 ./cloud_collect.sh。退出码非 0：运行 .venv/bin/python cloud_handoff.py $DAY --failed "<失败环节 + 日志关键报错>" 后结束。
-4. 按 AGENTS.md「日常流程」第 2-4 步与「内容规则」写稿：正文新闻事实与 sources **只能来自 news_pool.json**（cloud_collect.sh 已按 24 小时窗口和海外一手优先生成）；WebSearch 最多 5 组、一次并行发出，只用来核对池内事实，搜到而池里没有的事实一律不写；不要 WebFetch 抓文章原文；views_feed.txt 只取多空方向；美联储情景按池内最新事实设基准/偏好/偏坏。用 Python json.dump 生成 content_$DAY.json，每条 bullet 约 330–380 个可见字、alert 约 200 字，力求首次构建即落在 6,300–6,600 字；运行 .venv/bin/python build_brief.py content_$DAY.json，最多构建 3 次，并完成成稿终检。
+4. 按 AGENTS.md「日常流程」第 2-4 步与「内容规则」写稿：正文新闻事实与 sources **只能来自 news_pool.json**（cloud_collect.sh 已按 24 小时窗口和海外一手优先生成）；WebSearch 最多 5 组、一次并行发出，只用来核对池内事实，搜到而池里没有的事实一律不写；不要 WebFetch 抓文章原文；views_feed.txt 只取多空方向；美联储情景按池内最新事实设基准/偏好/偏坏。用 Python json.dump 生成 content_$DAY.json，每条 bullet 约 260–330 个可见字、alert 约 200 字，力求首次构建即落在 5,500–6,200 字；运行 .venv/bin/python build_brief.py content_$DAY.json，最多构建 3 次，并完成成稿终检。
 5. 构建与终检通过：运行 .venv/bin/python cloud_handoff.py $DAY。3 次构建仍不合格或任何硬校验失败：运行 cloud_handoff.py $DAY --failed "<原因>"。
 6. 若 git 推送 briefs 分支被拒绝：改用 GitHub MCP 工具向 aaron0607/Global-Finance-Brief 的 briefs 分支提交同样的文件（briefs/$DAY/content_$DAY.json、wechat_article_$DAY.html、READY.json，READY.json 字段同 cloud_handoff.py）；仍失败就在会话里写明原因。
 7. 最后用 3-5 行汇报：主标题、正文字数、构建次数、交接结果（READY 或 FAILED 及原因）。
