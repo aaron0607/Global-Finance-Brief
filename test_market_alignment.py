@@ -264,7 +264,8 @@ class BuildSnapshotAuditTests(unittest.TestCase):
 
     def test_commodity_header_uses_actual_quote_date(self):
         html = build_brief.render_commodity_table("8月8日", [])
-        self.assertIn("大宗 / 外汇（8月8日）", html)
+        self.assertIn(">8月8日</td>", html)
+        self.assertNotIn("大宗 / 外汇", html)
         self.assertNotIn("最新数据", html)
 
     def test_builder_rejects_tampered_vix_lag(self):

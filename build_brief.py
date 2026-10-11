@@ -489,7 +489,7 @@ def render_index_table(label, rows, price_label="收盘价"):
 
 def render_commodity_table(label, rows):
     out = ['<table style="width:100%;border-collapse:collapse;font-size:15px;margin:0 0 20px;">',
-           '<tr><td width="40%%" style="background-color:#3a3835;color:#f5f4f0;font-weight:700;padding:8px 10px;word-break:keep-all;">大宗 / 外汇（%s）</td>'
+           '<tr><td width="40%%" style="background-color:#3a3835;color:#f5f4f0;font-weight:700;padding:8px 10px;">%s</td>'
            '<td width="28%%" style="background-color:#3a3835;color:#f5f4f0;font-weight:700;padding:8px 10px;">价格</td>'
            '<td width="32%%" style="background-color:#3a3835;color:#f5f4f0;font-weight:700;padding:8px 10px;">涨跌</td></tr>' % label]
     for (name, bg), r in zip(COMMODITY_ROWS, rows):
