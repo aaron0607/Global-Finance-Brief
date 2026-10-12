@@ -51,6 +51,12 @@ SOURCE_TIERS = {
 }
 OVERSEAS_CAP = 60
 TITLE_LINE_MAX = 24
+TITLE_MIN_CHARS = 8  # 低于此长度只可能是“费半上涨”式的指数涨跌，不是新闻标题
+TITLE_REPAIR_ATTEMPTS = 2
+# 不适合作标题的资讯类型（日历、申购、早餐、互动易等），兜底选标题时直接跳过
+TITLE_NOISE_WORDS = ("早餐", "申购", "日历", "一览", "提醒", "前瞻", "互动易", "解禁",
+                     "指南", "盘前", "热榜", "要闻", "|", "｜",
+                     "为什么", "如何", "是否", "能否", "还是", "吗", "呢")
 ALERT_MIN, ALERT_MAX = 180, 260
 NOTE_MIN, NOTE_MAX = 30, 100
 TITLE_FORBIDDEN_PHRASES = (
@@ -1052,6 +1058,9 @@ def title_news_errors(main_title) -> list[str]:
         return ["标题为空"]
     plain = re.sub(r"<br\s*/?>|\s+", "", main_title)
     errors = []
+    if len(plain) < TITLE_MIN_CHARS:
+        errors.append("标题过短（%d 字），须写出具体主体、动作和关键数字，不得只写指数涨跌"
+                      % len(plain))
     found = [phrase for phrase in TITLE_FORBIDDEN_PHRASES if phrase in plain]
     if found:
         errors.append("含观点型/模糊词：" + "、".join(found))
@@ -1064,41 +1073,120 @@ def title_news_errors(main_title) -> list[str]:
     return errors
 
 
-def fallback_main_title(snap: dict) -> str:
-    """根据已校验行情生成必定合规的保底标题。
+_TITLE_INDEX_ALIASES = {"标普500": "标普500", "纳斯达克综合": "纳指",
+                        "道琼斯": "道指", "费城半导体": "费半"}
+_TITLE_COMMODITY_ALIASES = (("黄金", "黄金"), ("布伦特", "布油"), ("美元指数", "美元指数"))
 
-    仅在模型的标题单独修复也失败时使用，确保一个标题问题不会让整篇正文作废。
-    """
-    aliases = {
-        "标普500": "标普500",
-        "纳斯达克综合": "纳斯达克",
-        "道琼斯": "道指",
-        "费城半导体": "费半",
-    }
+
+def _bigrams_cn(text: str) -> set[str]:
+    chars = re.sub(r"[^\u4e00-\u9fffA-Za-z0-9]", "", text)
+    return {chars[i:i + 2] for i in range(len(chars) - 1)}
+
+
+def _move_phrase(name: str, chg) -> str | None:
+    match = re.search(r"[-+]?\d+(?:\.\d+)?", str(chg or ""))
+    if not match or "bp" in str(chg).lower():
+        return None
+    value = float(match.group())
+    if abs(value) < 0.005:
+        return name + "持稳"
+    return "%s%s%.2f%%" % (name, "上涨" if value > 0 else "下跌", abs(value))
+
+
+def _market_title_lines(snap: dict) -> tuple[str | None, str | None]:
+    """行情兜底的两行：指数行（涨跌幅最大的两个指数）、大宗行（黄金+布油/美元指数）。"""
     ranked = []
     for row in snap.get("indices", []):
-        name = row.get("name")
-        if name not in aliases:
-            continue
+        alias = _TITLE_INDEX_ALIASES.get(row.get("name"))
         match = re.search(r"[-+]?\d+(?:\.\d+)?", str(row.get("chg", "")))
-        if not match:
+        if alias and match:
+            ranked.append((abs(float(match.group())), alias, row.get("chg")))
+    ranked.sort(reverse=True)
+    parts = [p for p in (_move_phrase(a, c) for _, a, c in ranked[:2]) if p]
+    index_line = "·".join(parts) if parts else None
+    comm = []
+    for row in snap.get("commodities", []):
+        for key, alias in _TITLE_COMMODITY_ALIASES:
+            if key in str(row.get("name", "")):
+                phrase = _move_phrase(alias, row.get("chg"))
+                if phrase:
+                    comm.append(phrase)
+                break
+    comm_line = "·".join(comm[:2]) if comm else None
+    fits = lambda line: line if line and len(line) <= TITLE_LINE_MAX else None
+    return fits(index_line), fits(comm_line)
+
+
+def _clean_news_headline(raw: str) -> str | None:
+    """把新闻池标题清洗成可直接做标题行的短句；不合规返回 None。"""
+    text = re.sub(r"\s+", "", raw or "")
+    text = re.sub(r"^【[^】]{1,12}】", "", text)
+    text = re.sub(r"^[^，。：:]{0,8}?\d{1,2}月\d{1,2}日[电讯]?[，,：:]?", "", text)
+    text = re.sub(r"^[^，。：:]{1,6}(?:电|讯)[，：:]", "", text)
+    text = re.split(r"[。！!？?]", text)[0].strip("，,：: ")
+    if len(text) > TITLE_LINE_MAX:
+        first = re.split(r"[，,；;：:]", text)[0]
+        text = first if len(first) >= TITLE_MIN_CHARS else ""
+    if not (TITLE_MIN_CHARS <= len(text) <= TITLE_LINE_MAX):
+        return None
+    cjk = len(re.findall(r"[\u4e00-\u9fff]", text))
+    if cjk < 4 or cjk < len(text) * 0.3 or any(word in text for word in TITLE_NOISE_WORDS):
+        return None
+    if title_news_errors(text):
+        return None
+    return text
+
+
+def news_pool_title_lines(pool: list[dict], focus_text: str = "") -> list[str]:
+    """从新闻池挑出至多两行互不重复的标题候选，优先与当天头号焦点相关的条目。"""
+    focus_grams = _bigrams_cn(focus_text)
+    scored = []
+    for order, item in enumerate(pool or []):
+        line = _clean_news_headline(item.get("title", ""))
+        if not line:
             continue
-        change = float(match.group())
-        ranked.append((abs(change), change, aliases[name]))
-    if not ranked:
-        return "美股指数持稳"
-    _, change, name = max(ranked)
-    verb = "上涨" if change > 0 else "下跌" if change < 0 else "持稳"
-    title = name + verb
-    # aliases 和动词均受控；保留断言防止后续改名破坏标题硬约束。
-    assert title_ok(title) and not title_news_errors(title)
-    return title
+        relevance = len(_bigrams_cn(line) & focus_grams)
+        scored.append((-relevance, item.get("tier", 3), order, line))
+    scored.sort()
+    picked: list[str] = []
+    for *_, line in scored:
+        if all(len(_bigrams_cn(line) & _bigrams_cn(p)) < 3 and line != p for p in picked):
+            picked.append(line)
+        if len(picked) == 2:
+            break
+    return picked
+
+
+def fallback_main_title(snap: dict, pool: list[dict] | None = None,
+                        focus_text: str = "") -> str:
+    """保底标题：优先用新闻池里的真实头条，行情只补位，永不输出“费半上涨”式短标题。
+
+    顺序：新闻头条 ×2 → 新闻头条 + 指数行 → 指数行 + 大宗行 → 指数行/大宗行单独成题。
+    """
+    news = news_pool_title_lines(pool or [], focus_text)
+    index_line, comm_line = _market_title_lines(snap or {})
+    candidates = []
+    if len(news) == 2:
+        candidates.append(news)
+    if news:
+        candidates.append([news[0]] + ([index_line] if index_line else []))
+    if index_line and comm_line:
+        candidates.append([index_line, comm_line])
+    for line in (index_line, comm_line):
+        if line:
+            candidates.append([line])
+    for lines in candidates:
+        title = "<br>".join(lines)
+        if title_ok(title) and not title_news_errors(title):
+            return title
+    return "美股三大指数持稳"
 
 
 def ensure_main_title(content: dict, snap: dict, pool: list[dict]) -> str | None:
     """确保标题合规；正文已经有效时只修标题，不重新生成整篇。
 
-    返回一条供日志展示的修复说明；原标题已合规则返回 None。
+    模型修复最多 TITLE_REPAIR_ATTEMPTS 轮（每轮带上一轮的失败原因）；仍失败时用
+    新闻池头条 + 行情兜底。返回一条供日志展示的修复说明；原标题已合规则返回 None。
     """
     original = normalize_main_title(content.get("main_title"))
     content["main_title"] = original
@@ -1115,33 +1203,47 @@ def ensure_main_title(content: dict, snap: dict, pool: list[dict]) -> str | None
         news_lines.append("- " + text[:240])
     focus = next((sec for sec in content.get("sections", [])
                   if isinstance(sec, dict) and sec.get("id") == "focus"), {})
-    prompt = (
-        "请只修复下面财经简报的 main_title。只输出一个 JSON 对象，格式为"
-        "{\"main_title\":\"标题\"}，不要输出其他文字。\n"
-        "硬规则：标题必须由具体主体、已发生动作和关键数字构成；事实只能来自候选新闻；"
-        "优先写成两行，第一行是主事件+市场反应，第二行是另一条影响定价的副线；"
-        "禁止观点、预测、问句、感叹号和来源转述；最多两行、每行最多24字符。"
-        "必须含已发生、可验证的事实动词，例如发布、宣布、增长、翻倍、上涨、下跌、"
-        "大涨、回落、推出、签署、恢复。\n"
-        "原标题：%s\n头号焦点：%s\n摘要：%s\n候选新闻：\n%s"
-        % (original, focus.get("title", ""), str(content.get("alert", ""))[:500],
-           "\n".join(news_lines))
-    )
-    try:
-        raw, _ = call_deepseek(prompt)
-        repaired_obj = extract_json(raw)
-        repaired = normalize_main_title(
-            repaired_obj.get("main_title") if isinstance(repaired_obj, dict) else ""
+    last_errors = original_errors
+    last_candidate = original
+    for attempt in range(TITLE_REPAIR_ATTEMPTS):
+        prompt = (
+            "请只修复下面财经简报的 main_title。只输出一个 JSON 对象，格式为"
+            "{\"main_title\":\"标题\"}，不要输出其他文字。\n"
+            "这是新闻类文章的标题，要写成新闻媒体的标题（参考彭博、路透、华尔街见闻的头条写法）："
+            "具体主体 + 已发生动作 + 关键数字，不是指数涨跌摘要。\n"
+            "硬规则：事实只能来自候选新闻；"
+            "写成两行用 <br> 分隔，第一行是主事件+市场反应，第二行是另一条影响定价的副线；"
+            "每行 12-24 字符，总长不得少于 %d 字；"
+            "禁止观点、预测、问句、感叹号和来源转述；"
+            "禁止只写“某指数上涨/下跌”这类无事件的标题。"
+            "必须含已发生、可验证的事实动词，例如发布、宣布、增长、翻倍、上涨、下跌、"
+            "大涨、回落、推出、签署、恢复。\n"
+            "上一版标题：%s\n上一版问题：%s\n头号焦点：%s\n摘要：%s\n候选新闻：\n%s"
+            % (TITLE_MIN_CHARS, last_candidate, "；".join(last_errors),
+               focus.get("title", ""), str(content.get("alert", ""))[:500],
+               "\n".join(news_lines))
         )
-        if title_ok(repaired) and not title_news_errors(repaired):
-            content["main_title"] = repaired
-            return "main_title 已单独修复：%s → %s" % (original, repaired)
-    except (Exception, SystemExit) as exc:  # 标题修复失败不得拖垮整篇正文
-        print("  ⚠️ 标题单独修复调用失败：%s" % exc, file=sys.stderr)
+        try:
+            raw, _ = call_deepseek(prompt)
+            repaired_obj = extract_json(raw)
+            repaired = normalize_main_title(
+                repaired_obj.get("main_title") if isinstance(repaired_obj, dict) else ""
+            )
+            problems = ([] if title_ok(repaired) else ["格式违规"]) + title_news_errors(repaired)
+            if not problems:
+                content["main_title"] = repaired
+                return "main_title 已单独修复（第 %d 轮）：%s → %s" % (attempt + 1, original, repaired)
+            last_candidate, last_errors = repaired or last_candidate, problems
+        except (Exception, SystemExit) as exc:  # 标题修复失败不得拖垮整篇正文
+            print("  ⚠️ 标题单独修复调用失败：%s" % exc, file=sys.stderr)
 
-    fallback = fallback_main_title(snap)
+    focus_text = " ".join([
+        str(focus.get("title", "")), str(content.get("alert", "")),
+        " ".join(b for b in (focus.get("bullets") or []) if isinstance(b, str)),
+    ])
+    fallback = fallback_main_title(snap, pool, _plain(focus_text))
     content["main_title"] = fallback
-    return "main_title 单独修复未通过，已使用行情兜底：%s → %s" % (original, fallback)
+    return "main_title 单独修复未通过，已使用新闻池头条/行情兜底：%s → %s" % (original, fallback)
 
 
 # 头号焦点与后文重复：focus 把当天最大事件讲透，其他板块出现同一事件只写增量含义。
