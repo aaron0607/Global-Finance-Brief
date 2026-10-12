@@ -131,6 +131,6 @@
 ## 代码同步
 
 - 代码以 GitHub `main` 为唯一权威版本：改动在本机分支上完成并测试 → 推送分支、开 PR → 合并到 `main`（见下方授权范围）→ 本机 `git pull --ff-only origin main` → 服务器同步。禁止直接在服务器或本机 main 上形成长期分叉。
-- **PR 合并授权（2026-10-12 用户授权）**：Claude 可自行合并**自己开的 PR**，须同时满足：① 本地测试全部通过；② diff 只含预期文件，不含 `.secrets.env`、运行数据等被忽略范围；③ 不涉及发布、调度、密钥（`publish_wechat.py`、`run_brief.sh`、`cloud_collect.sh`、`server_publish.sh`、cron、`.secrets.env` 相关）。不满足任一条，或 PR 不是 Claude 所开，仍由用户合并。合并后须告知合并内容及是否需要同步服务器；服务器同步仍只在用户明确要求时执行，且先 `--dry-run`。不使用 auto-merge。
+- **PR 合并授权（2026-10-12 用户授权）**：Claude 可自行合并**自己开的 PR**，须同时满足：① 本地测试全部通过；② diff 只含预期文件，不含 `.secrets.env`、运行数据等被忽略范围；③ 不涉及发布、调度、密钥（`publish_wechat.py`、`run_brief.sh`、`cloud_collect.sh`、`server_publish.sh`、cron、`.secrets.env` 相关）。不满足任一条，或 PR 不是 Claude 所开，仍由用户合并。合并后须告知合并内容，并**主动询问用户是否同步服务器**：说明本次改动是否影响服务器运行（代码类 PR 会影响下一次 08:20 任务；纯文档 PR 不影响运行）、服务器当前落后哪个提交，并给出建议；用户明确答复前不同步，同步时先 `--dry-run`。不使用 auto-merge。
 - 服务器同步：`cd /home/ubuntu/finance-brief && python3 server_sync.py`，经 GitHub REST API 把 `main` 的跟踪文件同步过来（服务器连不上 github.com，但 api.github.com 可达），运行数据不动，被覆盖的旧文件备份到 `backups/sync_*/`，同步到的提交记在 `.synced_commit`。可先加 `--dry-run` 预览。
 - **禁止**再用 `git push production main`：该方式会用本机 main 整体 `checkout -f` 覆盖服务器，2026-10-10 曾因本机 main 落后 GitHub 而把服务器代码回退。本机已移除 `production` remote。
