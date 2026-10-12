@@ -35,7 +35,7 @@ from content_validation import (CALENDAR_REQUIRED_FROM, ensure_emphasis, trim_lo
 BASE = Path(__file__).parent
 BRIEF_TZ = ZoneInfo("Asia/Shanghai")
 API_URL = "https://api.deepseek.com/chat/completions"
-MODEL = os.environ.get("DEEPSEEK_MODEL", "deepseek-chat")
+MODEL = os.environ.get("DEEPSEEK_MODEL", "deepseek-flash")
 MAX_ATTEMPTS = 6
 # 2026-10-11：硬下限 6000→5000、目标 6300-6600→5500-6200；上限 7000 不变。
 TARGET_MIN, TARGET_MAX = 5500, 6200
