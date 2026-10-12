@@ -111,11 +111,34 @@ class MainTitleRepairTests(unittest.TestCase):
     }
     POOL = [{"title": "CoreWeave营收同比增长112%", "summary": "盘后大涨16%"}]
 
-    def test_market_fallback_is_valid(self):
+    def test_market_fallback_is_never_a_four_char_index_move(self):
         title = fallback_main_title(self.SNAP)
-        self.assertEqual(title, "费半上涨")
+        self.assertNotEqual(title, "费半上涨")
+        self.assertGreaterEqual(len(title.replace("<br>", "")), 8)
         self.assertTrue(title_ok(title))
         self.assertEqual(title_news_errors(title), [])
+
+    def test_too_short_index_title_is_rejected(self):
+        for bad in ("费半上涨", "道指下跌", "标普500上涨"):
+            self.assertTrue(any("过短" in e for e in title_news_errors(bad)), bad)
+
+    def test_fallback_prefers_news_pool_headlines(self):
+        pool = [
+            {"title": "财联社9月9日电，今日申购指南及新股定位分析", "summary": "", "tier": 3},
+            {"title": "【快讯】英伟达宣布向OpenAI追加投资300亿美元", "summary": "", "tier": 2},
+            {"title": "美联储官员称维持利率不变至年底", "summary": "", "tier": 2},
+        ]
+        title = fallback_main_title(self.SNAP, pool, "英伟达追加投资OpenAI")
+        self.assertEqual(title, "英伟达宣布向OpenAI追加投资300亿美元<br>美联储官员称维持利率不变至年底")
+        self.assertNotIn("申购", title)
+        self.assertTrue(title_ok(title))
+        self.assertEqual(title_news_errors(title), [])
+
+    def test_fallback_with_one_headline_adds_index_line(self):
+        pool = [{"title": "CoreWeave营收同比增长112%", "summary": "", "tier": 1}]
+        title = fallback_main_title(self.SNAP, pool, "CoreWeave营收")
+        self.assertTrue(title.startswith("CoreWeave营收同比增长112%<br>"))
+        self.assertTrue(title_ok(title))
 
     @patch("write_brief.call_deepseek")
     def test_invalid_title_is_repaired_without_rewriting_body(self, call):
@@ -130,7 +153,18 @@ class MainTitleRepairTests(unittest.TestCase):
         self.assertEqual(content["main_title"], "CoreWeave营收翻倍<br>盘后大涨16%")
 
     @patch("write_brief.call_deepseek")
-    def test_failed_title_repair_uses_market_fallback(self, call):
+    def test_short_repair_is_retried_then_accepted(self, call):
+        call.side_effect = [
+            ('{"main_title":"费半上涨"}', "stop"),
+            ('{"main_title":"CoreWeave营收翻倍<br>盘后大涨16%"}', "stop"),
+        ]
+        content = {"main_title": "费半上涨", "alert": "摘要", "sections": []}
+        note = ensure_main_title(content, self.SNAP, self.POOL)
+        self.assertIn("第 2 轮", note)
+        self.assertEqual(call.call_count, 2)
+
+    @patch("write_brief.call_deepseek")
+    def test_failed_title_repair_uses_news_pool_fallback(self, call):
         call.return_value = ('{"main_title":"市场静待方向"}', "stop")
         content = {
             "main_title": "AI需求与资本开支成为焦点",
@@ -138,8 +172,9 @@ class MainTitleRepairTests(unittest.TestCase):
             "sections": [],
         }
         note = ensure_main_title(content, self.SNAP, self.POOL)
-        self.assertIn("行情兜底", note)
-        self.assertEqual(content["main_title"], "费半上涨")
+        self.assertIn("兜底", note)
+        self.assertTrue(content["main_title"].startswith("CoreWeave营收同比增长112%"))
+        self.assertGreaterEqual(len(content["main_title"].replace("<br>", "")), 8)
 
 
 class ContentRepairTests(unittest.TestCase):
