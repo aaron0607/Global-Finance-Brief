@@ -78,7 +78,7 @@
 - 本项目使用本地 Git 仓库做版本管理，范围限于代码、规则与模板：`*.py`、`AGENTS.md`、`README.md`、`CHANGELOG.md`、`content_template.json`、`docs/`、`wechat_fragments/`、`requirements.txt`、`run_brief.sh`、`cloud_collect.sh`、`server_publish.sh`。
   - 每日抓取/生成的运行数据与产出物（`content_YYYYMMDD.json`、`wechat_article_YYYYMMDD.html`、`market_snapshot.json`、`news_feed.json`、`calendar_feed.json`、`views_feed.json`、`qdii_cache.json`、`news_history.json`）、`.venv/`、`__pycache__/`、`backups/`、`.secrets.env`、`.claude/settings.local.json` 由 `.gitignore` 排除，不纳入版本管理——这些要么可重新生成，要么已用文件名日期自成历史，要么含机器本地路径或密钥。
   - 提交前用 `git status` 确认暂存内容，不要用 `git add -A`/`git add .` 整批加入，避免误提交上述排除范围。
-  - 远程：`origin` = GitHub `aaron0607/Global-Finance-Brief`，`main` 为代码唯一权威版本；改动走分支 + PR，由用户合并。本机 `main` 只做 `git pull --ff-only origin main` 跟随，不在本机 main 上直接提交。
+  - 远程：`origin` = GitHub `aaron0607/Global-Finance-Brief`，`main` 为代码唯一权威版本；改动走分支 + PR；合并授权见「代码同步」。本机 `main` 只做 `git pull --ff-only origin main` 跟随，不在本机 main 上直接提交。
 
 ## 典型故障处理
 
@@ -130,6 +130,7 @@
 
 ## 代码同步
 
-- 代码以 GitHub `main` 为唯一权威版本：改动在本机分支上完成并测试 → 推送分支、开 PR → 用户合并到 `main` → 本机 `git pull --ff-only origin main` → 服务器同步。禁止直接在服务器或本机 main 上形成长期分叉。
+- 代码以 GitHub `main` 为唯一权威版本：改动在本机分支上完成并测试 → 推送分支、开 PR → 合并到 `main`（见下方授权范围）→ 本机 `git pull --ff-only origin main` → 服务器同步。禁止直接在服务器或本机 main 上形成长期分叉。
+- **PR 合并授权（2026-10-12 用户授权）**：Claude 可自行合并**自己开的 PR**，须同时满足：① 本地测试全部通过；② diff 只含预期文件，不含 `.secrets.env`、运行数据等被忽略范围；③ 不涉及发布、调度、密钥（`publish_wechat.py`、`run_brief.sh`、`cloud_collect.sh`、`server_publish.sh`、cron、`.secrets.env` 相关）。不满足任一条，或 PR 不是 Claude 所开，仍由用户合并。合并后须告知合并内容及是否需要同步服务器；服务器同步仍只在用户明确要求时执行，且先 `--dry-run`。不使用 auto-merge。
 - 服务器同步：`cd /home/ubuntu/finance-brief && python3 server_sync.py`，经 GitHub REST API 把 `main` 的跟踪文件同步过来（服务器连不上 github.com，但 api.github.com 可达），运行数据不动，被覆盖的旧文件备份到 `backups/sync_*/`，同步到的提交记在 `.synced_commit`。可先加 `--dry-run` 预览。
 - **禁止**再用 `git push production main`：该方式会用本机 main 整体 `checkout -f` 覆盖服务器，2026-10-10 曾因本机 main 落后 GitHub 而把服务器代码回退。本机已移除 `production` remote。
