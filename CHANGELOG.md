@@ -1,5 +1,11 @@
 # 变更记录
 
+## 2026-10-12 · DeepSeek 模型名由旧别名 deepseek-chat 改为 deepseek-flash
+
+- **原因**：10-12 在服务器实测，`deepseek-chat` 只是旧别名，API 实际返回模型为 `deepseek-flash`（V4.1 Flash），`/models` 只列出 `deepseek-flash` 与 `deepseek-v4-pro`。第三方资料称旧名原定 7 月停用，继续依赖别名有被下线的风险。
+- **改动**：`write_brief.py` 的 `DEEPSEEK_MODEL` 默认值改为 `deepseek-flash`；仍可用环境变量覆盖。
+- **影响**：实际调用的模型不变，只是不再依赖旧别名。未启用思维模式，请求参数不变。
+
 ## 2026-10-12 · 合并 PR 后主动询问是否同步服务器
 
 - **原因**：用户反馈合并后不知道是否需要同步服务器，要求由 Claude 主动询问。
