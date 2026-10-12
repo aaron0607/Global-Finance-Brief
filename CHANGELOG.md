@@ -1,5 +1,10 @@
 # 变更记录
 
+## 2026-10-12 · AGENTS.md 补充写稿模型说明
+
+- **原因**：现役文档从未写明写稿用哪个 DeepSeek 模型，只能读代码确认；10-12 实测旧别名 `deepseek-chat` 实际返回 `deepseek-flash`。
+- **改动**：`AGENTS.md`「生产调度」新增一条：默认模型、覆盖方式、旧别名风险、换模型前的核对方法。仅文档。
+
 ## 2026-10-12 · DeepSeek 模型名由旧别名 deepseek-chat 改为 deepseek-flash
 
 - **原因**：10-12 在服务器实测，`deepseek-chat` 只是旧别名，API 实际返回模型为 `deepseek-flash`（V4.1 Flash），`/models` 只列出 `deepseek-flash` 与 `deepseek-v4-pro`。第三方资料称旧名原定 7 月停用，继续依赖别名有被下线的风险。

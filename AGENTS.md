@@ -125,6 +125,7 @@
 - **当前生产（2026-10-09 起）**：唯一生产任务在腾讯云服务器 `115.159.56.153`（微信 API IP 白名单所在），北京时间每日 08:20 由 cron 触发 `run_brief.sh`：Phase 1 采集 → `write_brief.py` 调 DeepSeek 写稿（结构/字数/强调色定向修复 + 确定性兜底）→ `build_brief.py` 构建与终检 → `publish_wechat.py` 建草稿 + 飞书通知。已获用户授权的每日自动任务可直接发布当天草稿；失败时不得重复创建。本机调度保持停用，禁止形成两个发布者。
 - 服务器 crontab 只保留这一行（`CRON_TZ=Asia/Shanghai`）：`20 8 * * * mkdir -p /home/ubuntu/finance-brief/logs && /usr/bin/flock -n /tmp/finance-brief.lock /home/ubuntu/finance-brief/run_brief.sh >> /home/ubuntu/finance-brief/logs/cron.log 2>&1`。`server_publish.sh` 的 cron 已移除。
 - 服务器 `.secrets.env`（chmod 600）必填 `DEEPSEEK_API_KEY`、`BRIEF_GITHUB_TOKEN`（同步代码用，只读）；`JIN10_MCP_TOKEN`、`LARK_APP_ID`、`LARK_APP_SECRET` 按数据源需要选配。cron 重定向前必须先创建 `logs/`。
+- **写稿模型**：`write_brief.py` 默认 `deepseek-flash`（DeepSeek V4.1 Flash，非思维模式，temperature 0.6），可用环境变量 `DEEPSEEK_MODEL` 覆盖，服务器 `.secrets.env` 当前未设置。旧别名 `deepseek-chat` 目前仍路由到同一模型，但可能被下线，不要再写回。换模型前先用 `GET https://api.deepseek.com/models` 确认可用名。
 - `fetch_views.py` 失败属于非致命告警；行情、新闻或财经日历失败（`fetch_calendar.py` 重试一次仍失败）、结构/字数校验失败、构建失败均必须终止。DeepSeek 自动稿没有实时 WebSearch，发布前建议复核关键数字。
 - **云端写稿通道（已暂停，保留待复用）**：2026-09-27 至 10-08 曾由 Claude Code cloud Routine 写稿、经 GitHub `briefs` 分支交接、服务器 `server_publish.sh` 发布。用户已于 10-09 主动停用 Routine，相关代码（`cloud_collect.sh`、`cloud_handoff.py`、`make_news_pool.py`、`server_publish.sh`）保留但不运行。恢复步骤见 [`docs/cloud-routine.md`](docs/cloud-routine.md)；恢复时必须先注释掉服务器的 `run_brief.sh` cron，同一天只能有一个发布者。
 
