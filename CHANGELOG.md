@@ -1,5 +1,11 @@
 # 变更记录
 
+## 2026-10-13 · DeepSeek 请求显式关闭思维模式（修复 20261013 写稿失败）
+
+- **原因**：10-12 把模型名从别名 `deepseek-chat` 改为 `deepseek-flash` 时误判“实际模型不变”。实测 `deepseek-flash` 默认开启思维模式（返回 `reasoning_tokens`），`deepseek-chat` 别名才固定为非思维模式。10-13 08:20 任务 6 次写稿全部 `finish=length`，推理 token 挤占 16384 的 `max_tokens`，正文被截断，未产出 content，当天简报失败。
+- **改动**：`write_brief.call_deepseek` 请求体加 `"thinking": {"type": "disabled"}`；服务器实测该参数生效，无推理 token。
+- **影响**：恢复 10-12 之前的非思维模式行为；需同步服务器后对下一次任务生效。
+
 ## 2026-10-12 · AGENTS.md 补充写稿模型说明
 
 - **原因**：现役文档从未写明写稿用哪个 DeepSeek 模型，只能读代码确认；10-12 实测旧别名 `deepseek-chat` 实际返回 `deepseek-flash`。
