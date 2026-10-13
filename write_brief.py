@@ -558,6 +558,8 @@ def call_deepseek(prompt: str) -> str:
             "model": MODEL,
             "messages": [{"role": "system", "content": "你是专业的财经简报主笔，只输出符合要求的 JSON。"},
                          {"role": "user", "content": prompt}],
+            # deepseek-flash 默认开思维模式，推理 token 会挤占 max_tokens 导致正文被截断（20261013 事故）
+            "thinking": {"type": "disabled"},
             "temperature": 0.6,
             "max_tokens": 16384,
             "stream": False,
