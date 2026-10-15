@@ -696,6 +696,12 @@ class FocusOverlapTests(unittest.TestCase):
     def test_prompts_carry_dedup_rule(self):
         self.assertIn("头号焦点与后文不得重复", _prompt_text())
 
+    def test_overlap_leaves_rounds_for_length_convergence(self):
+        # 20261015：去重拦截占满前 4 轮、字数无轮次收敛；现只在前 3 轮拦截
+        import write_brief
+        self.assertLessEqual(write_brief.OVERLAP_SOFT_FROM, write_brief.MAX_ATTEMPTS - 2)
+        self.assertGreaterEqual(write_brief.OVERSHOOT_TOLERANCE, 800)
+
 
 def _prompt_text():
     import write_brief
