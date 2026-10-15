@@ -149,7 +149,8 @@ ALERT_FLOOR_SUFFIX = "后续以关键数据、利率与盘面反应作为验证�
 # 只保留每条首句(主题)与全部含数字/强调色的句子，可见正文里的事实、数字、
 # 机构观点与多空方向因此原样保留，仅去掉重复背景与软性过渡。
 COMPRESS_MARGIN = 40        # 压到 hard_max - 余量，落在区间内部而非贴边
-OVERSHOOT_TOLERANCE = 400   # 仅当超出硬上限 <= 该值才自动压缩，过多则交人工复核
+OVERSHOOT_TOLERANCE = 800   # 仅当超出硬上限 <= 该值才自动压缩，过多则交人工复核
+                            # （20261015：7438 字超 438 被拒，实测可压 560 字；压缩后仍以 build 复核为准）
 
 
 def now_bjt() -> dt.datetime:
@@ -511,7 +512,7 @@ def build_repair_prompt(content: dict, feedback: str, pool: list[dict], day: str
 8. 以下标识必须原样使用：date_yyyymmdd={day}；date_cn={date_cn}；as_of={as_of}；alert_time={alert_time}；index_note={index_note}；qdii_date_label={qdii_label}。禁止输出 indices/commodities。
 9. 若反馈涉及强调色，只在原有事实中圈选短语加标记，不改写或新增事实：每条 bullet 至少 1 处，focus/ai_tech 合计至少为 bullet 数的 2 倍，alert 至少 2 处；red=上涨/改善/利多，green=下跌/恶化/利空，c=关键事实/机构观点/结论/验证条件；单处不超过 40 字，禁止整段着色，**粗体**不计数。
 
-10. 若反馈指出“头号焦点与后文重复”，focus 保持原样不动；只改写反馈点名的后文句子：删除重复事实，或只写其在该板块的增量含义，或换成新闻池里该板块独有的其他事实（不得编造）。改写后保持该 bullet 的字数不低于最低值。
+10. 若反馈指出“头号焦点与后文重复”，focus 保持原样不动；只改写反馈点名的后文句子：删除重复事实，或只写其在该板块的增量含义，或换成新闻池里该板块独有的其他事实（不得编造）。改写后保持该 bullet 的字数不低于最低值，同时不得让整稿变长：删掉多少就最多补回多少，其余板块原样保留。
 
 【校验反馈】
 {feedback}
@@ -1253,7 +1254,8 @@ def ensure_main_title(content: dict, snap: dict, pool: list[dict]) -> str | None
 _FACT_NUM_RE = re.compile(r"(\d[\d,]*(?:\.\d+)?)(万亿|亿|万|%|点|美元|倍)?(?![\d年月日号时分周])")
 OVERLAP_MIN_BIGRAMS = 5
 OVERLAP_BLOCK_MIN = 2  # 累计复述 >= 2 句才要求重写
-OVERLAP_SOFT_FROM = MAX_ATTEMPTS - 1  # 最后两轮只告警不拦截，避免去重把整条流水线卡死
+OVERLAP_SOFT_FROM = 4  # 只在前 3 轮拦截，后 3 轮只告警，给字数收敛留足轮次
+                       # （20261015：去重占用 3 轮修复且每轮扩写，最后两轮字数未能压回）
 
 
 def _plain(text: str) -> str:
