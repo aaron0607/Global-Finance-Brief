@@ -115,12 +115,15 @@ def us_market_state(at: dt.datetime) -> str:
     return "休市"
 
 
-def index_state(quote_time: dt.datetime, run_started_at: dt.datetime) -> str:
+def index_state(quote_time: dt.datetime, run_started_at: dt.datetime, after_hours: bool = False) -> str:
     """指数状态：报价若属上一交易日（如盘前时段新浪仍给昨日收盘），
     按「休市·最近交易值」处理，避免把昨日收盘误判为盘前活跃而触发 30 分钟时效。"""
     if quote_time.astimezone(NY_TZ).date() < run_started_at.astimezone(NY_TZ).date():
         return "休市"
-    return us_market_state(run_started_at)
+    state = us_market_state(run_started_at)
+    # 指数没有盘后交易：16:00 ET 后报价即收盘值。冬令时（EST）下 08:20 北京时间 = 19:20 ET 仍处盘后，
+    # 若按盘后活跃时效校验会误判收盘值延迟（20261103 事故）。个股（after_hours=True）有盘后报价，保持原状态。
+    return "休市" if state == "盘后" and not after_hours else state
 
 
 def commodity_open(at: dt.datetime) -> bool:
@@ -134,6 +137,16 @@ def commodity_open(at: dt.datetime) -> bool:
     if weekday == 5:
         return local.time() < dt.time(6, 0)
     return False
+
+
+def commodity_state(at: dt.datetime, kind: str) -> str:
+    """布油（kind=commodity）每日 18:00–20:00 ET 休整；冬令时折合北京时间 07:00–09:00，
+    覆盖 08:20 采集点，休整期报价即最近成交值（20261103 事故）。"""
+    if not commodity_open(at):
+        return "休市"
+    if kind == "commodity" and dt.time(18, 0) <= at.astimezone(NY_TZ).time() < dt.time(20, 0):
+        return "休市"
+    return "交易中"
 
 
 def check_freshness(run_started_at: dt.datetime, quote_time: dt.datetime, state: str, what: str) -> float:
@@ -202,7 +215,7 @@ def fetch_sina_us(symbol_code: str, name: str, kind: str, run_started_at: dt.dat
         quote_time = dt.datetime.strptime(fields[3].strip(), "%Y-%m-%d %H:%M:%S").replace(tzinfo=BRIEF_TZ)
     except ValueError as exc:
         raise RuntimeError("新浪 %s 报价时间无效" % symbol_code) from exc
-    state = index_state(quote_time, run_started_at)
+    state = index_state(quote_time, run_started_at, after_hours=(kind != "index"))
     age = check_freshness(run_started_at, quote_time, state, symbol_code)
     session_date = quote_time.astimezone(NY_TZ).date().isoformat()
     change_basis = "较前收盘"
@@ -395,7 +408,7 @@ def fetch_eastmoney(secid: str, name: str, kind: str, run_started_at: dt.datetim
     if ts is None:
         raise RuntimeError("东财 %s 缺时间戳" % secid)
     quote_time = dt.datetime.fromtimestamp(ts, UTC).astimezone(BRIEF_TZ)
-    state = "交易中" if commodity_open(run_started_at) else "休市"
+    state = commodity_state(run_started_at, kind)
     check_freshness(run_started_at, quote_time, state, name)
     session_date = quote_time.astimezone(NY_TZ).date().isoformat()
     change_basis = "较前结算" if kind == "commodity" else ("较前收盘（基点）" if kind == "yield" else "较前收盘")
@@ -443,7 +456,7 @@ def fetch_sina_fallback(code: str, name: str, kind: str, run_started_at: dt.date
         raise RuntimeError("新浪 %s 字段不完整或时间无效" % code) from exc
     if price is None or price <= 0 or previous_close is None or previous_close <= 0:
         raise RuntimeError("新浪 %s 最新价/昨收无效" % code)
-    state = "交易中" if commodity_open(run_started_at) else "休市"
+    state = commodity_state(run_started_at, kind)
     check_freshness(run_started_at, quote_time, state, name)
     session_date = quote_time.astimezone(NY_TZ).date().isoformat()
     change_basis = "较前结算" if kind == "commodity" else ("较前收盘（基点）" if kind == "yield" else "较前收盘")
