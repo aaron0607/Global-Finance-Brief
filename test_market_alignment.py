@@ -329,5 +329,23 @@ class FinalRenderQATests(unittest.TestCase):
         self.assertIn("Python/JSON 程序结构残留", str(raised.exception))
 
 
+class WinterTimeStateTests(unittest.TestCase):
+    """冬令时 08:20 北京时间 = 19:20 ET（20261103 事故）。"""
+
+    def setUp(self):
+        self.run = dt.datetime(2026, 11, 3, 8, 20, tzinfo=fetch_market.BRIEF_TZ)
+        self.close = dt.datetime(2026, 11, 3, 5, 0, tzinfo=fetch_market.BRIEF_TZ)
+
+    def test_index_close_is_closed_not_after_hours(self):
+        self.assertEqual(fetch_market.index_state(self.close, self.run), "休市")
+
+    def test_stock_keeps_after_hours(self):
+        self.assertEqual(fetch_market.index_state(self.close, self.run, after_hours=True), "盘后")
+
+    def test_brent_break_is_closed(self):
+        self.assertEqual(fetch_market.commodity_state(self.run, "commodity"), "休市")
+        self.assertEqual(fetch_market.commodity_state(self.run, "yield"), "交易中")
+
+
 if __name__ == "__main__":
     unittest.main()
