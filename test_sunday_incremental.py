@@ -26,7 +26,7 @@ class SundayIncrementalTests(unittest.TestCase):
         self.assertIs(w.select_profile(snap, dt.date(2026, 11, 14)), w.NORMAL_PROFILE)
 
     def test_short_word_limits_require_sunday_and_explicit_edition(self):
-        self.assertEqual(word_limits({'date_yyyymmdd': '20261115', 'edition': SUNDAY_MODE}), (2000, 5000))
+        self.assertEqual(word_limits({'date_yyyymmdd': '20261115', 'edition': SUNDAY_MODE}), (4500, 6000))
         self.assertEqual(word_limits({'date_yyyymmdd': '20261115'}), (5000, 7000))
         with self.assertRaises(ValueError):
             word_limits({'date_yyyymmdd': '20261116', 'edition': SUNDAY_MODE})
@@ -70,7 +70,7 @@ class SundayIncrementalTests(unittest.TestCase):
         content = ContentRepairTests()._valid_content()
         content.update(date_yyyymmdd='20260830', edition=SUNDAY_MODE)
         content['sections'] = [content['sections'][0]]
-        content['sections'][0]['bullets'] = content['sections'][0]['bullets'][:1]
+        content['sections'][0]['bullets'] = content['sections'][0]['bullets'][:2]
         errors = w.validate_required(content, '20260830', w.SUNDAY_PROFILE['bullet_rules'], w.SUNDAY_PROFILE['min_bullet_chars'])
         self.assertEqual(errors, [])
         content.pop('edition')
@@ -94,7 +94,7 @@ class SundayIncrementalTests(unittest.TestCase):
         for prompt in (p, repair):
             self.assertIn('周日增量版', prompt)
             self.assertIn('昨日已覆盖事件', prompt)
-            self.assertIn('3600-4300', prompt)
+            self.assertIn('5000-5600', prompt)
             self.assertIn('不是本期可引用素材', prompt)
             self.assertNotIn('focus 3 条', prompt)
             self.assertNotIn('focus 每段 260-340', prompt)
@@ -115,7 +115,7 @@ class SundayMainFlowTests(unittest.TestCase):
             for name, result in (('load_snapshot', snap), ('build_news_pool', []),
                                  ('load_previous_issue', previous), ('load_calendar_feed', ([{}], [])),
                                  ('post_process', []), ('ensure_main_title', ''), ('focus_overlap_errors', []),
-                                 ('run_build', (0, '正文字符数(去标签): 3900'))):
+                                 ('run_build', (0, '正文字符数(去标签): 5300'))):
                 stack.enter_context(patch.object(w, name, return_value=result))
             stack.enter_context(patch.object(w.sys, 'argv', ['write_brief.py']))
             stack.enter_context(patch.object(w.Path, 'write_text'))

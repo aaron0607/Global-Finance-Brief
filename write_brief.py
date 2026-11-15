@@ -46,7 +46,7 @@ NEWS_CAP = 100
 # 新闻池来源分级：1=海外一手媒体（优先入池）、2=国内实时快讯、3=国内聚合热榜；未登记来源按 3 级。
 # 海外一手最多占 OVERSEAS_CAP 席，为 A 股/国内视角保留余量；二、三级不足时再由剩余海外条目补满。
 SOURCE_TIERS = {
-    "bloomberg": 1, "reuters": 1, "cnbc": 1,
+    "bloomberg": 1, "reuters": 1, "ap": 1, "official": 1, "cnbc": 1, "cnbc-tech": 1, "cnbc-world": 1,
     "futu-news-search": 2, "jin10-flash": 2, "jin10-news": 2, "wscn-live": 2,
     "cls": 3, "wallstreetcn": 3, "xueqiu": 3,
 }
@@ -123,10 +123,10 @@ THIN_PROFILE = {
 }
 SUNDAY_PROFILE = {
     "thin": True, "edition": SUNDAY_MODE,
-    "target_min": 3600, "target_max": 4300,
-    "hard_min": 2000, "hard_max": 5000, "accept_min": 2000,
-    "bullet_rules": {"focus": (1, 2), "ai_tech": (1, 3), "stock_rotation": (1, 1),
-                     "iran": (1, 2), "macro": (1, 2), "commodity": (1, 2)},
+    "target_min": 5000, "target_max": 5600,
+    "hard_min": 4500, "hard_max": 6000, "accept_min": 4500,
+    "bullet_rules": {"focus": (2, 3), "ai_tech": (3, 4), "stock_rotation": (1, 1),
+                     "iran": (1, 3), "macro": (1, 2), "commodity": (1, 2)},
     "min_bullet_chars": {sid: 90 for sid in MIN_BULLET_CHARS},
 }
 
@@ -171,7 +171,10 @@ def parse_iso(value) -> dt.datetime | None:
     if not value:
         return None
     try:
-        return dt.datetime.fromisoformat(str(value)).astimezone(BRIEF_TZ)
+        parsed = dt.datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        if parsed.tzinfo is None or parsed.utcoffset() is None:
+            return None
+        return parsed.astimezone(BRIEF_TZ)
     except (TypeError, ValueError):
         return None
 
@@ -279,8 +282,22 @@ def build_news_pool(window_start: dt.datetime, window_end: dt.datetime) -> list[
     if not path.exists():
         sys.exit("✗ 缺 news_feed.json —— 先运行 fetch_news.py")
     feed = json.loads(path.read_text(encoding="utf-8"))
+    feed_items = list(feed.get("items", []))
+    supplemental = BASE / "supplemental_news.json"
+    if supplemental.exists():
+        try:
+            for item in json.loads(supplemental.read_text(encoding="utf-8")).get("items", []):
+                if (item.get("verified") is True and item.get("url", "").startswith("https://")
+                        and item.get("title") and item.get("published_at")):
+                    feed_items.append(item)
+        except (ValueError, OSError, TypeError) as exc:
+            print("⚠️ 补查新闻读取失败：%s" % exc, file=sys.stderr)
     candidates = []
-    for item in feed.get("items", []):
+    for item in feed_items:
+
+        if (item.get("timestamp_basis") == "ranking_updated_at"
+                or (item.get("source") == "alphaear" and item.get("verified") is not True)):
+            continue
         published = parse_iso(item.get("published_at"))
         if not published or not (window_start <= published <= window_end):
             continue
@@ -289,8 +306,9 @@ def build_news_pool(window_start: dt.datetime, window_end: dt.datetime) -> list[
             "source_name": item.get("source_name") or item.get("source", "未知"),
             "source_id": source_id,
             "tier": source_tier(source_id),
-            "title": (item.get("title") or "").strip()[:160],
-            "summary": (item.get("summary") or "").strip()[:220],
+            "title": (item.get("title") or "").strip()[:400],
+            "summary": (item.get("summary") or "").strip()[:1500],
+            "url": item.get("url", ""),
             "published_at": published.isoformat(),
             "_ts": published.timestamp(),
         })
@@ -306,11 +324,24 @@ def build_news_pool(window_start: dt.datetime, window_end: dt.datetime) -> list[
             continue
         seen.add(key)
         unique.append(item)
+    # Reserve candidates for both core beats before source-tier truncation.
+    topic_patterns = (r"AI|人工智能|芯片|半导体|英伟达|微软|Meta|Microsoft|Nvidia|TSMC|Anthropic",
+                      r"伊朗|霍尔木兹|胡塞|中东|以色列|Iran|Hormuz|Houthi|Israel|Ukraine")
+    reserved = []
+    for pattern in topic_patterns:
+        reserved.extend([it for it in unique if re.search(pattern, it["title"] + it["summary"], re.I)][:12])
     overseas = [it for it in unique if it["tier"] == 1]
     domestic = [it for it in unique if it["tier"] != 1]
     pool = overseas[:OVERSEAS_CAP]
     pool += domestic[:NEWS_CAP - len(pool)]
     pool += overseas[OVERSEAS_CAP:][:NEWS_CAP - len(pool)]
+    combined, keys = [], set()
+    for item in reserved + pool + unique:
+        key = (item["source_id"], item["title"])
+        if key not in keys:
+            keys.add(key)
+            combined.append(item)
+    pool = combined[:NEWS_CAP]
     pool.sort(key=lambda it: (it["tier"], -it["_ts"]))
     for item in pool:
         del item["_ts"]
@@ -447,7 +478,10 @@ def previous_sentences(previous: dict) -> list[str]:
 
 def repeated_event(text: str, earlier: list[str], threshold: float = 0.78) -> str | None:
     plain = event_plain(text)
-    clauses = [plain, re.split(r"[，,；;：:。！？]", plain)[0]]
+    clauses = [plain]
+    first = re.split(r"[，,；;：:。！？]", plain)[0]
+    if not re.search(r"新增|进一步|恢复|宣布|决定|更新|扩大|已完成", plain[len(first):]):
+        clauses.append(first)
     nums = _fact_numbers(plain)
     for old in earlier:
         old_plain = event_plain(old)
@@ -500,10 +534,11 @@ def sunday_context(previous: dict | None) -> str:
     return ("\n【周日增量版专用要求】\n"
             "只写周六简报截止点之后的新进展；周五收盘及昨日讲过的事件不得再当头条、"
             "不得换措辞再展开，行情旧收盘数字只留表格。新评论/新转载时间不代表事件更新。"
-            "同一事件有新增声明、决定或数据时只讲增量，背景最多一句。"
-            "只有focus必填，其余板块无新进展直接省略。focus 1-2段，ai_tech 1-3段，stock_rotation 1段，macro 1-2段，"
-            "commodity 1-2段，只写有新进展的黄金或能源；iran仅有新实质进展时1-2段。每段140-220字，"
-            "核心科技可稍长，逻辑框架合计200-300字。无需填满所有主题，禁止为凑字重复宏观/金油背景。"
+            "同一事件有新增声明、决定、数据或实质进展时继续追踪，不得因昨日讲过就整条排除；背景最多一句。"
+            "必须主动补查海外媒体及官方信息，科技/地缘有实质进展时重点展开。"
+            "只有focus必填，其余板块无新进展直接省略。focus 2-3段，ai_tech 3-4段，stock_rotation 1段，macro 1-2段，"
+            "commodity 1-2段，只写有新进展的黄金或能源；iran有新实质进展时1-3段。每段200-300字，"
+            "核心科技可稍长，逻辑框架合计300-450字。无需填满所有主题，禁止为凑字重复宏观/金油背景。"
             "无新增投行研报时不要为满足普通日条款重用昨日机构观点。"
             "昨日成稿是去重对照，绝不是本期可引用素材；只能引用本期新闻池和行情。"
             "\n【昨日已覆盖事件，只用于避重】\n" + json.dumps(prior, ensure_ascii=False) + "\n")
@@ -540,12 +575,12 @@ def build_prompt(snap: dict, pool: list[dict], day: str, date_cn: str, alert_tim
     length_details = '不要靠增加碎段凑字。**focus 每段 260-340 字，ai_tech 每段 250-330 字，stock_rotation/iran/macro 每段 210-290 字，commodity 两段各 230-300 字**；这里指去掉 `[[c:]]`、`[[red:]]`、`[[green:]]` 和 `**` 后读者实际看到的字数。每段通常 3-5 句，内部顺序为“事实与数字→市场反应/交叉验证→传导逻辑→风险或验证条件”。alert 可见正文 180-240 字，logic_chain 合计 400-600 字，note 40-90 字。无 iran 时，把缺口集中补进 focus 与 ai_tech 的新增论证段。'
     if profile.get("edition") == SUNDAY_MODE:
         sections_hint = ("仅focus必填；其余无新进展可省略，保留原有板块相对顺序。"
-                         "focus 1-2条、ai_tech 1-3条、stock_rotation 1条、macro 1-2条、"
-                         "commodity 1-2条、iran有实质新增时1-2条。"
+                         "focus 2-3条、ai_tech 3-4条、stock_rotation 1条、macro 1-2条、"
+                         "commodity 1-2条、iran有实质新增时1-3条。"
                          "每节仍须id/title/bullets/note及对应来源，每条至少1处强调色，科技与焦点平均2处。")
         body_rules = "每段只展开本期新增事实，无新事实的主题不设段落；不补写周五收盘复盘。"
-        length_details = ("每段140-220个可见字，科技可略长，alert 180-240字，"
-                          "logic_chain合计200-300字，note 40-90字。新增不足允许更短，"
+        length_details = ("每段200-300个可见字，科技可略长，alert 180-240字，"
+                          "logic_chain合计300-450字，note 40-90字。优先补查科技与地缘新增事实，"
                           "不要因为缺少某板块而扩写其他板块凑篇幅。")
     news_lines = []
     for i, item in enumerate(pool, 1):
@@ -617,9 +652,9 @@ def build_repair_prompt(content: dict, feedback: str, pool: list[dict], day: str
     hmin, hmax = profile["hard_min"], profile["hard_max"]
     repair_structure = 'sections 顺序必须是 focus、ai_tech、stock_rotation、iran（仅有实质进展时）、macro、commodity。目标为 focus 3 条、ai_tech 4 条、stock_rotation 2 条、iran 3 条、macro 3 条、commodity 2 条；无 iran 时 focus/ai_tech 可各增加 1 条，重大信号充足时 stock_rotation/macro 可各增加 1 条。每个板块必须有 id/title/bullets/note。'
     if profile.get("edition") == SUNDAY_MODE:
-        repair_structure = "只有focus必填，其余无新增板块可省略；相对顺序不变。focus 1-2条、ai_tech 1-3条、stock_rotation 1条、macro/commodity 1-2条、iran有新增时1-2条，每节保留id/title/bullets/note与来源。"
+        repair_structure = "只有focus必填，其余无新增板块可省略；相对顺序不变。focus 2-3条、ai_tech 3-4条、stock_rotation 1条、macro/commodity 1-2条、iran有新增时1-3条，每节保留id/title/bullets/note与来源。"
     news_lines = []
-    for i, item in enumerate(pool[:30], 1):
+    for i, item in enumerate(pool, 1):
         text = item["title"] + ("。" + item["summary"] if item["summary"] else "")
         news_lines.append("[%d] %s | %s" % (i, item["published_at"], text))
     extra_context = sunday_context(profile.get("previous_issue")) if profile.get("edition") == SUNDAY_MODE else ""

@@ -30,3 +30,6 @@ backups/
 # 服务器运行日志
 logs/
 .synced_commit
+
+# 原文核验后的补查新闻，属于运行数据
+supplemental_news.json

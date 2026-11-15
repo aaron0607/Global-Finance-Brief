@@ -53,6 +53,12 @@ RSS_FEEDS = {
     },
 }
 
+# Domain feeds supplement the broad top-news feed; failure remains visible.
+RSS_FEEDS.update({
+    "cnbc-tech": {"name": "CNBC Technology", "url": "https://www.cnbc.com/id/19854910/device/rss/rss.html", "category": "technology"},
+    "cnbc-world": {"name": "CNBC World", "url": "https://www.cnbc.com/id/100727362/device/rss/rss.html", "category": "geopolitics"},
+})
+
 RSS_RETRY_DELAY = 2  # 秒
 
 # ── Reuters ────────────────────────────────────────────
@@ -72,14 +78,15 @@ REUTERS_MAX_ITEMS = 40
 REUTERS_MAX_PAGES = 20
 REUTERS_TIME_BUDGET_S = 60
 BING_NEWS_URL = "https://www.bing.com/news/search"
-BING_REUTERS_QUERIES = ("markets", "stocks", "technology", "economy Fed", "oil gold")
+BING_REUTERS_QUERIES = ("markets", "stocks", "technology", "economy Fed", "oil gold", "Iran Israel Hormuz", "Nvidia Microsoft AI infrastructure")
 REUTERS_URL_DATE = re.compile(r"-(\d{4}-\d{2}-\d{2})/?$")
 
 # ── Futu 牛牛新闻搜索（公共 HTTP API，无需 OpenD/鉴权）────────
 # 供写稿阶段按关键词补强中文财经/个股新闻；keyword 可在调用时覆盖。
 FUTU_BASE = "https://ai-news-search.futunn.com/news_search"
 FUTU_UA = "futunn-news-search/0.0.2 (Skill)"
-FUTU_KEYWORDS = ["英伟达", "美联储", "黄金", "原油", "半导体", "科技股", "AI"]
+FUTU_KEYWORDS = ["英伟达", "美联储", "黄金", "原油", "半导体", "科技股", "AI",
+                 "微软 数据中心", "伊朗 霍尔木兹", "以色列 胡塞"]
 
 # ── 金十数据（通过 jin10 远程 MCP 的 HTTP 协议直连）────────
 # token 从环境变量 JIN10_MCP_TOKEN 读取（服务器部署时写入 .secrets.env，chmod 600），
@@ -136,7 +143,7 @@ def _parse_rss(xml_text: str) -> list[dict]:
                 "title": _clean_title(title),
                 "url": link,
                 "published_at": _try_parse_rss_date(pub_date),
-                "summary": _strip_html(desc)[:300] if desc else "",
+                "summary": _strip_html(desc)[:1500] if desc else "",
             })
     return items
 
@@ -198,8 +205,10 @@ def fetch_alphaear(source_id: str, count: int = 15) -> list[dict]:
             "source_id": source_id,
             "title": it.get("title", ""),
             "url": it.get("url", it.get("mobileUrl", "")),
-            "summary": it.get("summary", it.get("description", ""))[:300],
-            "published_at": fetched_at,
+            "summary": it.get("summary", it.get("description", ""))[:1500],
+            "published_at": None,
+            "discovered_at": fetched_at,
+            "timestamp_basis": "ranking_updated_at",
         })
     return results
 
@@ -246,7 +255,7 @@ def _reuters_item(title: str, url: str, published: dt.datetime, summary: str = "
         "source_id": "reuters",
         "title": title.strip(),
         "url": url,
-        "summary": summary.strip()[:300],
+        "summary": summary.strip()[:1500],
         "published_at": published.astimezone(BRIEF_TZ).isoformat(),
     }
 
@@ -473,7 +482,7 @@ def fetch_jin10(flash_limit: int = 30, news_limit: int = 15) -> list[dict]:
                 "source_id": "jin10-flash",
                 "title": _clean_title(content)[:120],
                 "url": item.get("url", ""),
-                "summary": _strip_html(content)[:300],
+                "summary": _strip_html(content)[:1500],
                 "published_at": item.get("time"),
             })
     news = jin10_call("list_news", {})
@@ -485,7 +494,7 @@ def fetch_jin10(flash_limit: int = 30, news_limit: int = 15) -> list[dict]:
                 "source_id": "jin10-news",
                 "title": item.get("title", ""),
                 "url": item.get("url", ""),
-                "summary": (item.get("summary") or item.get("content") or "")[:300],
+                "summary": (item.get("summary") or item.get("content") or "")[:1500],
                 "published_at": item.get("time") or item.get("published_at"),
             })
     return items
@@ -517,7 +526,7 @@ def fetch_wscn_live(limit: int = 20) -> list[dict]:
                 "source_id": "wscn-live",
                 "title": title,
                 "url": item.get("uri", ""),
-                "summary": text[:300],
+                "summary": text[:1500],
                 "published_at": _format_epoch(item.get("display_time")),
             })
     except Exception as exc:  # noqa: BLE001 - 单源失败不阻断

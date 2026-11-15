@@ -43,7 +43,7 @@ def word_limits(content):
         raise ValueError("周日增量版日期无效")
     if day.weekday() != 6:
         raise ValueError("周日增量版仅能用于周日，不能放宽其他日期字数")
-    return 2000, 5000
+    return 4500, 6000
 
 
 def apply_name_abbreviations(value, _key: str | None = None):
