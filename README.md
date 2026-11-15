@@ -92,6 +92,8 @@ python3 -m venv .venv
 生产调度为「腾讯云服务器 DeepSeek 写稿 + 发布」（`run_brief.sh`，每日 08:20），见 `AGENTS.md`「生产调度」与「代码同步」；Claude Code cloud 写稿通道已于 2026-10-09 暂停、代码保留，恢复步骤见 `docs/cloud-routine.md`。代码以 GitHub `main` 为准，服务器用 `server_sync.py` 同步。Codex 项目规则以 `AGENTS.md` 为准。内容只写入 `content_YYYYMMDD.json`，禁止直接编辑 HTML。
 
 
-### 周日增量短版
+### 周日简报与主动补查
 
-周日只写周六之后的新进展：读取昨日成稿做事件去重，识别中文/英文产品名与旧事件换时间戳转载；新声明、决定或新数据可以作为跟进，旧收盘行情只保留在表格。普通版仍为 5000–7000 字，周日 `sunday_incremental` 目标 3600–4300 字、硬范围 2000–5000 字，并减少固定条数，避免新闻不足时为凑篇幅复述周六。来源窗口、行情快照、财经日历和强调色校验保持严格。
+周日正文4500–6000字，目标5000–5600字；只适度缩短，主要靠挖掘科技与地缘新增事实减少重复。同一事件有新决定、声明、数据或实质进展继续跟进，严格24小时窗口。
+
+采集增加CNBC科技/国际专题与地缘关键词；新闻池预留科技/地缘候选，保留URL及最多1500字摘要，修订提供完整新闻池。榜单刷新时间不能作为文章发布时间。主动核验的海外媒体/官方原文写入 supplemental_news.json（items含verified=true、https URL、title、source_id、source_name、带时区published_at、summary），经同样的时效/去重处理后才可用于写稿。
