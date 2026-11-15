@@ -739,6 +739,7 @@ class SentenceDeletionRepairTests(unittest.TestCase):
                 stack.enter_context(patch.object(self.wb, name, return_value=value))
             stack.enter_context(patch.object(self.wb.sys, "argv", ["write_brief.py"]))
             stack.enter_context(patch.object(self.wb, "MAX_ATTEMPTS", 2))
+            stack.enter_context(patch.object(self.wb, "select_profile", return_value=NORMAL_PROFILE))
             stack.enter_context(patch.object(self.wb.Path, "write_text"))
             stack.enter_context(patch.object(self.wb, "write_content"))
             api = stack.enter_context(patch.object(self.wb, "call_deepseek", return_value=(json.dumps(self.doc), "stop")))
