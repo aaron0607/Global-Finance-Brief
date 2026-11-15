@@ -7,7 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import write_brief as w
-from content_validation import SUNDAY_MODE, word_limits
+from content_validation import SUNDAY_MODE, NONTRADING_MODE, word_limits
 
 
 class SundayIncrementalTests(unittest.TestCase):
@@ -92,7 +92,7 @@ class SundayIncrementalTests(unittest.TestCase):
         p = w.build_prompt(snap, [], '20261115', 'date', '08:20', 'asof', 'index', 'qdii', '', profile=profile)
         repair = w.build_repair_prompt({}, 'feedback', [], '20261115', 'date', '08:20', 'asof', 'index', 'qdii', profile)
         for prompt in (p, repair):
-            self.assertIn('周日增量版', prompt)
+            self.assertIn('休市次日增量版', prompt)
             self.assertIn('昨日已覆盖事件', prompt)
             self.assertIn('5000-5600', prompt)
             self.assertIn('不是本期可引用素材', prompt)
@@ -123,7 +123,7 @@ class SundayMainFlowTests(unittest.TestCase):
             api = stack.enter_context(patch.object(w, 'call_deepseek', return_value=(json.dumps(content), 'stop')))
             self.assertEqual(w.main(), 0)
             self.assertEqual(api.call_count, 1)
-            self.assertEqual(write.call_args.args[1]['edition'], SUNDAY_MODE)
+            self.assertEqual(write.call_args.args[1]['edition'], NONTRADING_MODE)
 
 
 if __name__ == '__main__':

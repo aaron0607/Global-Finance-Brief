@@ -34,7 +34,7 @@ import sys, os, re, json, datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from content_validation import (word_limits, apply_name_abbreviations, calendar_summary, emphasis_summary,
+from content_validation import (NONTRADING_MODE, follows_nontrading_day, word_limits, apply_name_abbreviations, calendar_summary, emphasis_summary,
                                 name_abbreviation_errors, validate_calendar, validate_emphasis,
                                 validate_no_structure_leaks)
 
@@ -693,6 +693,11 @@ def fill_market(content):
             sys.exit("✗ 行情快照 fetched_at 晚于当前时间")
     except (KeyError, TypeError, ValueError):
         sys.exit("✗ 行情快照缺 fetched_at 字段 —— 重新运行 .venv/bin/python fetch_market.py")
+    if content.get("edition") == NONTRADING_MODE:
+        actual_session = snap.get("price_index_session_date")
+        if (content.get("market_session_date") != actual_session
+                or not follows_nontrading_day(content.get("date_yyyymmdd"), actual_session)):
+            sys.exit("✗ 休市次日版的交易日依据与有效行情快照不一致")
     if "indices" not in snap or "commodities" not in snap:
         sys.exit("✗ 行情快照不含完整行情表 —— 重新运行 fetch_market.py")
     if not snap.get("commodity_date_label") or not snap.get("commodity_quote_date"):

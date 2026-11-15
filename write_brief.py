@@ -30,7 +30,7 @@ from zoneinfo import ZoneInfo
 
 import requests
 
-from content_validation import (word_limits, SUNDAY_MODE, CALENDAR_REQUIRED_FROM, ensure_emphasis, trim_long_emphasis,
+from content_validation import (word_limits, SUNDAY_MODE, NONTRADING_MODE, INCREMENTAL_MODES, follows_nontrading_day, CALENDAR_REQUIRED_FROM, ensure_emphasis, trim_long_emphasis,
                                 validate_calendar, validate_emphasis, validate_no_structure_leaks)
 
 BASE = Path(__file__).parent
@@ -121,14 +121,16 @@ THIN_PROFILE = {
     "bullet_rules": {**BULLET_RULES, "ai_tech": (3, 5)},
     "min_bullet_chars": {sid: 90 for sid in MIN_BULLET_CHARS},
 }
-SUNDAY_PROFILE = {
-    "thin": True, "edition": SUNDAY_MODE,
+NONTRADING_PROFILE = {
+    "thin": True, "edition": NONTRADING_MODE,
     "target_min": 5000, "target_max": 5600,
     "hard_min": 4500, "hard_max": 6000, "accept_min": 4500,
     "bullet_rules": {"focus": (2, 3), "ai_tech": (3, 4), "stock_rotation": (1, 1),
                      "iran": (1, 3), "macro": (1, 2), "commodity": (1, 2)},
     "min_bullet_chars": {sid: 90 for sid in MIN_BULLET_CHARS},
 }
+
+SUNDAY_PROFILE = NONTRADING_PROFILE  # 旧调用兼容，实际按交易日触发
 
 NOTE_FLOOR_SUFFIXES = {
     "focus": "后续重点观察关键事件、数据与盘面能否形成同向验证。",
@@ -440,8 +442,8 @@ def is_thin_session(snap: dict, brief_date: dt.date) -> bool:
 
 
 def select_profile(snap: dict, brief_date: dt.date) -> dict:
-    if brief_date.weekday() == 6:
-        return SUNDAY_PROFILE
+    if follows_nontrading_day(brief_date, snap.get("price_index_session_date")):
+        return NONTRADING_PROFILE
     return THIN_PROFILE if is_thin_session(snap, brief_date) else NORMAL_PROFILE
 
 
@@ -515,7 +517,7 @@ def previous_issue_errors(content: dict, previous: dict) -> list[str]:
     errors, hits = [], []
     for part in re.split(r"<br\s*/?>|[·｜|]", content.get("main_title", "")):
         if repeated_event(part, earlier, 0.65):
-            errors.append("周日标题重复昨日已讲事件：%s；必须改为窗口内新进展，不得以旧收盘涨跌作头条" % part)
+            errors.append("休市次日标题重复昨日已讲事件：%s；必须改为窗口内新进展，不得以旧收盘涨跌作头条" % part)
     for sec in content.get("sections", []):
         for bi, bullet in enumerate(sec.get("bullets", []), 1):
             for sentence in _split_sentences(bullet):
@@ -524,15 +526,15 @@ def previous_issue_errors(content: dict, previous: dict) -> list[str]:
                 if repeated_event(sentence, earlier):
                     hits.append("%s[%d]：%s" % (sec["id"], bi, event_plain(sentence)[:75]))
     if len(hits) >= 2:
-        errors.append("周日正文重复昨日事件：%s。删去复述；背景最多保留一句，只写可在本期新闻池核对的新增事实。" % "；".join(hits[:4]))
+        errors.append("休市次日正文重复昨日事件：%s。删去复述；背景最多保留一句，只写可在本期新闻池核对的新增事实。" % "；".join(hits[:4]))
     return errors
 
 
 def sunday_context(previous: dict | None) -> str:
     prior = {"date": previous.get("date_yyyymmdd"), "title": previous.get("main_title"),
              "already_covered": previous_sentences(previous)} if previous else None
-    return ("\n【周日增量版专用要求】\n"
-            "只写周六简报截止点之后的新进展；周五收盘及昨日讲过的事件不得再当头条、"
+    return ("\n【休市次日增量版专用要求】\n"
+            "只写昨日简报截止点之后的新进展；上一交易日收盘及昨日讲过的事件不得再当头条、"
             "不得换措辞再展开，行情旧收盘数字只留表格。新评论/新转载时间不代表事件更新。"
             "同一事件有新增声明、决定、数据或实质进展时继续追踪，不得因昨日讲过就整条排除；背景最多一句。"
             "必须主动补查海外媒体及官方信息，科技/地缘有实质进展时重点展开。"
@@ -551,13 +553,13 @@ def build_prompt(snap: dict, pool: list[dict], day: str, date_cn: str, alert_tim
     profile = profile or NORMAL_PROFILE
     tmin, tmax = profile["target_min"], profile["target_max"]
     hmin, hmax = profile["hard_min"], profile["hard_max"]
-    sunday_block = sunday_context(profile.get("previous_issue")) if profile.get("edition") == SUNDAY_MODE else ""
+    sunday_block = sunday_context(profile.get("previous_issue")) if profile.get("edition") in INCREMENTAL_MODES else ""
     thin_block = ("\n【淡日提示（重要）】今日为美股休市/长假后的第一个交易日：隔夜美股无新成交、"
                   "过夜新闻明显偏少。请勿为凑字硬造事实、堆砌碎段或重复背景；把篇幅重心放在宏观利率、"
                   "大宗商品、亚洲与欧洲盘面，以及【本周财经日历】的前瞻解读上。允许每条论证段略短、"
                   "板块条数取下限，整体字数下限已相应放宽——写满真实信息即可，不要注水。\n"
                   ) if profile.get("thin") else ""
-    if profile.get("edition") == SUNDAY_MODE:
+    if profile.get("edition") in INCREMENTAL_MODES:
         thin_block = ""
     sections_hint = (
         "固定板块顺序：focus(头号焦点)、ai_tech(AI·芯片·科技，核心板块)、"
@@ -573,12 +575,12 @@ def build_prompt(snap: dict, pool: list[dict], day: str, date_cn: str, alert_tim
     )
     body_rules = '   板块内容规范：\n   - `focus`：3 条完整论证段，依次完成 ①核心事实与盘面 ②跨市场/产业交叉验证 ③课代表框架、反方信号与验证条件；无 iran 时可增至 4 条。\n   - `ai_tech`（核心板块，字数最多）：4 条完整论证段，按当天信息自然组合算力/芯片、AI前沿、云资本支出、政策生态及存储/CPO/PCB/电力冷却等“卖铲子”环节；不要为了覆盖目录而硬凑空段。无 iran 时可增至 5 条。\n   - `stock_rotation`：2 条，第一条讲市场风格与资金去向，第二条讲科技以外最有独立催化的板块/公司；确有第三条强信号时可增至 3 条。\n   - `iran`（地缘）：条件板块，无实质进展（战事/停火/制裁重大变化）就移除；有内容时固定 3 条，分别讲事实进展、通航/供应验证、油价→通胀→利率传导。\n   - `macro`：3 条，围绕利率定价、政策/数据、后续验证窗口组成一条因果链；重大宏观日可增至 4 条。\n   - `commodity`：固定 2 条；第一条黄金，第二条合并布伦特原油期货与美元指数，以三者的利率/地缘传导关系收束。'
     length_details = '不要靠增加碎段凑字。**focus 每段 260-340 字，ai_tech 每段 250-330 字，stock_rotation/iran/macro 每段 210-290 字，commodity 两段各 230-300 字**；这里指去掉 `[[c:]]`、`[[red:]]`、`[[green:]]` 和 `**` 后读者实际看到的字数。每段通常 3-5 句，内部顺序为“事实与数字→市场反应/交叉验证→传导逻辑→风险或验证条件”。alert 可见正文 180-240 字，logic_chain 合计 400-600 字，note 40-90 字。无 iran 时，把缺口集中补进 focus 与 ai_tech 的新增论证段。'
-    if profile.get("edition") == SUNDAY_MODE:
+    if profile.get("edition") in INCREMENTAL_MODES:
         sections_hint = ("仅focus必填；其余无新进展可省略，保留原有板块相对顺序。"
                          "focus 2-3条、ai_tech 3-4条、stock_rotation 1条、macro 1-2条、"
                          "commodity 1-2条、iran有实质新增时1-3条。"
                          "每节仍须id/title/bullets/note及对应来源，每条至少1处强调色，科技与焦点平均2处。")
-        body_rules = "每段只展开本期新增事实，无新事实的主题不设段落；不补写周五收盘复盘。"
+        body_rules = "每段只展开本期新增事实，无新事实的主题不设段落；不补写上一交易日收盘复盘。"
         length_details = ("每段200-300个可见字，科技可略长，alert 180-240字，"
                           "logic_chain合计300-450字，note 40-90字。优先补查科技与地缘新增事实，"
                           "不要因为缺少某板块而扩写其他板块凑篇幅。")
@@ -651,13 +653,13 @@ def build_repair_prompt(content: dict, feedback: str, pool: list[dict], day: str
     tmin, tmax = profile["target_min"], profile["target_max"]
     hmin, hmax = profile["hard_min"], profile["hard_max"]
     repair_structure = 'sections 顺序必须是 focus、ai_tech、stock_rotation、iran（仅有实质进展时）、macro、commodity。目标为 focus 3 条、ai_tech 4 条、stock_rotation 2 条、iran 3 条、macro 3 条、commodity 2 条；无 iran 时 focus/ai_tech 可各增加 1 条，重大信号充足时 stock_rotation/macro 可各增加 1 条。每个板块必须有 id/title/bullets/note。'
-    if profile.get("edition") == SUNDAY_MODE:
+    if profile.get("edition") in INCREMENTAL_MODES:
         repair_structure = "只有focus必填，其余无新增板块可省略；相对顺序不变。focus 2-3条、ai_tech 3-4条、stock_rotation 1条、macro/commodity 1-2条、iran有新增时1-3条，每节保留id/title/bullets/note与来源。"
     news_lines = []
     for i, item in enumerate(pool, 1):
         text = item["title"] + ("。" + item["summary"] if item["summary"] else "")
         news_lines.append("[%d] %s | %s" % (i, item["published_at"], text))
-    extra_context = sunday_context(profile.get("previous_issue")) if profile.get("edition") == SUNDAY_MODE else ""
+    extra_context = sunday_context(profile.get("previous_issue")) if profile.get("edition") in INCREMENTAL_MODES else ""
     candidate = json.dumps(content, ensure_ascii=False, indent=2)
     return f"""你正在修订一份已有的财经简报 JSON。请根据【校验反馈】定向修复【上一版 JSON】，只输出修复后的一个完整 JSON 对象，不要输出解释或 markdown。
 
@@ -1641,10 +1643,10 @@ def validate_required(content: dict, day: str, bullet_rules: dict | None = None,
         if "iran" in ids:
             expected.append("iran")
         expected.extend(["macro", "commodity"])
-        if content.get("edition") == SUNDAY_MODE:
+        if content.get("edition") in INCREMENTAL_MODES:
             expected = [sid for sid in expected if sid in ids]
             if "focus" not in ids:
-                errors.append("周日增量版至少需要一个头号焦点")
+                errors.append("休市次日增量版至少需要一个头号焦点")
         if ids != expected:
             errors.append("sections 顺序/集合应为 %s，实际为 %s" % (expected, ids))
         for index, sec in enumerate(sections):
@@ -1771,8 +1773,8 @@ def main() -> int:
 
     # 淡日感知：美股休市/长假后首日隔夜无新成交、过夜新闻偏薄，放宽字数下限与 ai_tech 条数下限。
     profile = dict(select_profile(snap, as_of_dt.date()))
-    if profile.get("edition") == SUNDAY_MODE:
-        print("周日增量档：目标 %d-%d 字，硬范围 %d-%d；不复述周六已讲事件" % (
+    if profile.get("edition") in INCREMENTAL_MODES:
+        print("休市次日增量档：目标 %d-%d 字，硬范围 %d-%d；不复述昨日已讲事件" % (
             profile["target_min"], profile["target_max"], profile["hard_min"], profile["hard_max"]))
     elif profile["thin"]:
         print("淡日档位：美股最近交易日为 %s（长假/休市后首日），字数下限放宽至 %d，目标 %d-%d"
@@ -1781,13 +1783,13 @@ def main() -> int:
     window_start = parse_iso(snap["news_window"]["start"])
     window_end = parse_iso(snap["news_window"]["end"])
     pool = build_news_pool(window_start, window_end)
-    previous = load_previous_issue(day) if profile.get("edition") == SUNDAY_MODE else None
+    previous = load_previous_issue(day) if profile.get("edition") in INCREMENTAL_MODES else None
     if previous:
         pool, dropped = filter_previous_events(pool, previous)
         profile["previous_issue"] = previous
-        print("周日增量版：昨日事件去重剔除 %d 条，保留 %d 条" % (len(dropped), len(pool)))
-    elif profile.get("edition") == SUNDAY_MODE:
-        print("⚠️ 缺昨日成稿，无法做跨日事件比对；仍采用周日短版规则", file=sys.stderr)
+        print("休市次日增量版：昨日事件去重剔除 %d 条，保留 %d 条" % (len(dropped), len(pool)))
+    elif profile.get("edition") in INCREMENTAL_MODES:
+        print("⚠️ 缺昨日成稿，无法做跨日事件比对；仍采用休市次日版规则", file=sys.stderr)
     print("新闻池：%d 条（窗口 %s 至 %s）" % (len(pool), snap["news_window"]["start"], snap["news_window"]["end"]))
 
     calendar_events, calendar_warnings = load_calendar_feed()
@@ -1851,10 +1853,12 @@ def main() -> int:
         parsed_any = True
         warnings = post_process(content, snap, pool, day, date_cn, alert_time, as_of, index_note,
                                 qdii_label, calendar_events, profile["min_bullet_chars"], profile["bullet_rules"])
-        if profile.get("edition") == SUNDAY_MODE:
-            content["edition"] = SUNDAY_MODE
+        if profile.get("edition") in INCREMENTAL_MODES:
+            content["edition"] = profile["edition"]
+            content["market_session_date"] = price_session_date
         else:
             content.pop("edition", None)
+            content.pop("market_session_date", None)
         candidate = content
         errors = validate_required(content, day, profile["bullet_rules"], profile["min_bullet_chars"])
         if not errors and previous:

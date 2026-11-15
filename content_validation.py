@@ -30,20 +30,39 @@ STRUCTURE_LEAK_RE = re.compile(
 )
 
 
-SUNDAY_MODE = "sunday_incremental"
+SUNDAY_MODE = "sunday_incremental"  # 已生成历史周日稿兼容
+NONTRADING_MODE = "nontrading_incremental"
+INCREMENTAL_MODES = (SUNDAY_MODE, NONTRADING_MODE)
+
+
+def follows_nontrading_day(brief_date, market_session_date):
+    """Use the verified snapshot's latest US session, not a weekend-only guess."""
+    try:
+        day = (brief_date if isinstance(brief_date, datetime.date)
+               else datetime.datetime.strptime(brief_date, "%Y%m%d").date())
+        session = datetime.date.fromisoformat(market_session_date)
+    except (ValueError, TypeError):
+        return False
+    return session < day - datetime.timedelta(days=1)
 
 
 def word_limits(content):
-    """Sunday's explicitly selected incremental edition may be shorter."""
-    if content.get("edition") != SUNDAY_MODE:
+    """Use 4500–6000 only for a verified nontrading-day edition or legacy Sunday."""
+    edition = content.get("edition")
+    if edition not in INCREMENTAL_MODES:
         return 5000, 7000
-    try:
-        day = datetime.datetime.strptime(content.get("date_yyyymmdd", ""), "%Y%m%d").date()
-    except (ValueError, TypeError):
-        raise ValueError("周日增量版日期无效")
-    if day.weekday() != 6:
-        raise ValueError("周日增量版仅能用于周日，不能放宽其他日期字数")
+    if edition == NONTRADING_MODE:
+        if not follows_nontrading_day(content.get("date_yyyymmdd"), content.get("market_session_date")):
+            raise ValueError("休市次日版缺少有效交易日依据，或上一自然日有美股交易")
+    else:
+        try:
+            day = datetime.datetime.strptime(content.get("date_yyyymmdd", ""), "%Y%m%d").date()
+        except (ValueError, TypeError):
+            raise ValueError("历史周日增量版日期无效")
+        if day.weekday() != 6:
+            raise ValueError("历史周日增量版仅兼容周日稿；其他休市次日须登记交易日依据")
     return 4500, 6000
+
 
 
 def apply_name_abbreviations(value, _key: str | None = None):
