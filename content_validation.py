@@ -30,6 +30,22 @@ STRUCTURE_LEAK_RE = re.compile(
 )
 
 
+SUNDAY_MODE = "sunday_incremental"
+
+
+def word_limits(content):
+    """Sunday's explicitly selected incremental edition may be shorter."""
+    if content.get("edition") != SUNDAY_MODE:
+        return 5000, 7000
+    try:
+        day = datetime.datetime.strptime(content.get("date_yyyymmdd", ""), "%Y%m%d").date()
+    except (ValueError, TypeError):
+        raise ValueError("周日增量版日期无效")
+    if day.weekday() != 6:
+        raise ValueError("周日增量版仅能用于周日，不能放宽其他日期字数")
+    return 2000, 5000
+
+
 def apply_name_abbreviations(value, _key: str | None = None):
     """递归替换 content 中所有字符串里的全称为简称（跳过 sources），返回新对象。"""
     if _key == "sources":

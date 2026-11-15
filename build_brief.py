@@ -34,7 +34,7 @@ import sys, os, re, json, datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from content_validation import (apply_name_abbreviations, calendar_summary, emphasis_summary,
+from content_validation import (word_limits, apply_name_abbreviations, calendar_summary, emphasis_summary,
                                 name_abbreviation_errors, validate_calendar, validate_emphasis,
                                 validate_no_structure_leaks)
 
@@ -750,6 +750,7 @@ def main():
     if len(sys.argv) < 2:
         sys.exit("用法: .venv/bin/python build_brief.py content_YYYYMMDD.json [output.html]")
     content = json.load(open(sys.argv[1], encoding="utf-8"))
+    word_min, word_max = word_limits(content)
     abbreviated = apply_name_abbreviations(content)
     if abbreviated != content:
         # 回写 content，保证发布入口看到的 JSON 与成稿一致
@@ -775,7 +776,7 @@ def main():
     out = sys.argv[2] if len(sys.argv) > 2 else "wechat_article_%s.html" % content["date_yyyymmdd"]
     open(out, "w", encoding="utf-8").write(html)
     n = count_chars(html)
-    flag = "✅ 达标" if WORD_MIN <= n <= WORD_MAX else ("⚠️ 偏少需扩充" if n < WORD_MIN else "⚠️ 超限需精简")
+    flag = "✅ 达标" if word_min <= n <= word_max else ("⚠️ 偏少需扩充" if n < word_min else "⚠️ 超限需精简")
     print("已生成: %s" % out)
     SRC_LABEL = {
         "api":     "云端接口 /api/qdii-snapshot",
@@ -791,16 +792,16 @@ def main():
     print("成稿终检: %s" % final_qa_status)
     print("新闻时效窗口: %s" % freshness_status)
     print("QDII 数据来源: %s%s" % (label, " (data_date=%s)" % cache_date if cache_date else ""))
-    print("正文字符数(去标签): %d  → %s  [硬约束 %d-%d]" % (n, flag, WORD_MIN, WORD_MAX))
+    print("正文字符数(去标签): %d  → %s  [硬约束 %d-%d]" % (n, flag, word_min, word_max))
     parts = section_counts(content)
     print("分段字数: " + " | ".join("%s %d" % p for p in parts))
-    if n > WORD_MAX:
-        over = n - WORD_MAX
+    if n > word_max:
+        over = n - word_max
         top = sorted((p for p in parts if p[0] not in ("calendar",)), key=lambda x: -x[1])[:3]
         hint = "、".join("%s(约-%d)" % (t[0], round(over * t[1] / sum(x[1] for x in top))) for t in top)
         print("→ 需精简约 %d 字，建议按占比砍: %s，一次砍到位后重跑" % (over, hint))
-    elif n < WORD_MIN:
-        print("→ 需扩充约 %d 字，优先加 ai_tech / focus 正文" % (WORD_MIN - n))
+    elif n < word_min:
+        print("→ 需扩充约 %d 字，优先加 ai_tech / focus 正文" % (word_min - n))
 
 
 if __name__ == "__main__":

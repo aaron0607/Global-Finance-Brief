@@ -1,5 +1,5 @@
 {
-  "_note": "复制此模板为 content_YYYYMMDD.json，修改 date info / alert / logic_chain / sources / sections。calendar 由 fetch_calendar.py 产出的 calendar_feed.json 确定性回填（日期写成“8月5日 周三”并带 date_iso），禁止凭记忆手写日期。main_title 须遵守 docs/title-style.md。禁止手写 indices / commodities / index_note。",
+  "_note": "复制此模板为 content_YYYYMMDD.json，修改 date info / alert / logic_chain / sources / sections。calendar 由 fetch_calendar.py 产出的 calendar_feed.json 确定性回填（日期写成“8月5日 周三”并带 date_iso），禁止凭记忆手写日期。main_title 须遵守 docs/title-style.md。禁止手写 indices / commodities / index_note。 周日由写稿器自动设置 edition=sunday_incremental，采用增量短版及昨日事件去重；其他日期不得手填该版式。",
   "date_yyyymmdd": "20260805",
   "date_cn": "2026年8月X日（周X）",
   "as_of": "COPY_FROM_market_snapshot.json.run_started_at",
