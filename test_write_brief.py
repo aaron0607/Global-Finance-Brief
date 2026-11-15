@@ -694,6 +694,17 @@ class SentenceDeletionRepairTests(unittest.TestCase):
         self.doc["sections"][0]["bullets"][0] = self.head + "背景" * 150 + "。" + self.tail
         self.assertIsNone(self.repair([self.cut], need=20))
 
+    def test_oversized_candidate_list_is_bounded_without_rewriting(self):
+        import copy
+        self.doc["sections"][0]["bullets"][0] = self.head + self.middle * 12 + self.tail
+        original = copy.deepcopy(self.doc)
+        cuts = [{**self.cut, "sentence_index": i} for i in range(1, 13)]
+        result = self.repair(cuts, need=60)
+        self.assertIsNotNone(result)
+        text = result["sections"][0]["bullets"][0]
+        self.assertEqual(text, self.head + self.middle * 10 + self.tail)
+        self.assertEqual(self.doc, original)
+
     def test_floor_and_truncated_response_are_rejected(self):
         self.profile["min_bullet_chars"]["focus"] = 1000
         self.assertIsNone(self.repair([self.cut]))

@@ -966,6 +966,43 @@ def repair_overlong_by_deletion(content: dict, need_cut: int, day: str,
         if key not in allowed or key in selected:
             return None
         selected.add(key)
+    proposed_chars = sum(visible_text_length(sentences[(sid, bi)][si])
+                         for sid, bi, si in selected)
+    if proposed_chars > need_cut + 150:
+        # Treat an oversized response as a candidate list, never as permission
+        # to delete everything. Prefer repeated copy outside the main focus.
+        grams = {(sid, bi, si): _bigrams(_plain(part))
+                 for (sid, bi), parts in sentences.items()
+                 for si, part in enumerate(parts)}
+
+        def redundancy(key):
+            own = grams[key]
+            return max((len(own & other) / max(1, min(len(own), len(other)))
+                        for other_key, other in grams.items()
+                        if other_key != key), default=0)
+
+        ranked = sorted(selected, key=lambda key: (
+            key[0] == "focus", -redundancy(key), key))
+        bounded, sizes, remaining = set(), {}, {}
+        removed_chars = 0
+        for sid, bi, si in ranked:
+            if removed_chars >= need_cut:
+                break
+            parts = sentences[(sid, bi)]
+            size = sizes.get((sid, bi), sum(visible_text_length(p) for p in parts))
+            count = remaining.get((sid, bi), len(parts))
+            cut_chars = visible_text_length(parts[si])
+            floor = profile["min_bullet_chars"].get(sid, 100)
+            if (count <= 2 or size - cut_chars < floor
+                    or removed_chars + cut_chars > need_cut + 150):
+                continue
+            bounded.add((sid, bi, si))
+            sizes[(sid, bi)] = size - cut_chars
+            remaining[(sid, bi)] = count - 1
+            removed_chars += cut_chars
+        selected = bounded
+        print("  模型选句超出预算（%d 字），限额执行 %d 字。"
+              % (proposed_chars, removed_chars), file=sys.stderr)
     result = copy.deepcopy(content)
     removed = 0
     for section in result["sections"]:
