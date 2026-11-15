@@ -651,6 +651,95 @@ class CompressBulletsTests(unittest.TestCase):
         self.assertEqual(compress_bullets(content, 50, MIN_BULLET_CHARS), 0)
 
 
+class SentenceDeletionRepairTests(unittest.TestCase):
+    def setUp(self):
+        import write_brief
+        self.wb = write_brief
+        self.head = "[[c:英伟达]]公布订单增长，产业需求保持稳定。"
+        self.middle = "重复的行业背景与短期情绪讨论需要结合未来订单兑现进一步观察。"
+        self.tail = "[[c:风险验证]]仍需观察利率变化及订单兑现，不能把情绪反弹等同于盈利兑现。"
+        self.doc = {"sections": [{"id": "focus", "bullets": [
+            self.head + self.middle + self.middle + self.tail]}],
+            "alert": "保留导读", "sources": [{"title": "保留来源"}]}
+        self.profile = {**NORMAL_PROFILE, "min_bullet_chars": {"focus": 30}}
+        self.cut = {"section_id": "focus", "bullet_index": 0, "sentence_index": 1}
+
+    def repair(self, cuts, finish="stop", need=None):
+        import json
+        with patch.object(self.wb, "call_deepseek", return_value=(json.dumps({"cuts": cuts}), finish)), \
+                patch.object(self.wb, "validate_required", return_value=[]):
+            return self.wb.repair_overlong_by_deletion(
+                self.doc, need or visible_text_length(self.middle), "20261115", self.profile)
+
+    def test_only_deletes_selected_original_sentence_without_mutating_input(self):
+        import copy
+        original = copy.deepcopy(self.doc)
+        result = self.repair([self.cut])
+        self.assertIsNotNone(result)
+        self.assertEqual(self.doc, original)
+        self.assertEqual(result["sections"][0]["bullets"][0], self.head + self.middle + self.tail)
+        self.assertEqual(result["sources"], original["sources"])
+        self.assertEqual(result["alert"], original["alert"])
+
+    def test_invalid_indices_duplicate_ids_and_bool_indices_are_rejected(self):
+        for cuts in ([{**self.cut, "sentence_index": 0}], [{**self.cut, "sentence_index": 3}],
+                     [{**self.cut, "section_id": "unknown"}], [self.cut, self.cut],
+                     [{**self.cut, "bullet_index": False}], ["bad"]):
+            with self.subTest(cuts=cuts):
+                self.assertIsNone(self.repair(cuts))
+
+    def test_insufficient_and_excessive_cuts_are_rejected(self):
+        self.assertIsNone(self.repair([]))
+        self.assertIsNone(self.repair([self.cut], need=200))
+        self.doc["sections"][0]["bullets"][0] = self.head + "背景" * 150 + "。" + self.tail
+        self.assertIsNone(self.repair([self.cut], need=20))
+
+    def test_floor_and_truncated_response_are_rejected(self):
+        self.profile["min_bullet_chars"]["focus"] = 1000
+        self.assertIsNone(self.repair([self.cut]))
+        self.assertIsNone(self.repair([self.cut], finish="length"))
+
+    def test_validation_failure_is_atomic(self):
+        import copy, json
+        original = copy.deepcopy(self.doc)
+        with patch.object(self.wb, "call_deepseek", return_value=(json.dumps({"cuts": [self.cut]}), "stop")), \
+                patch.object(self.wb, "validate_required", return_value=["结构不合规"]):
+            self.assertIsNone(self.wb.repair_overlong_by_deletion(
+                self.doc, visible_text_length(self.middle), "20261115", self.profile))
+        self.assertEqual(self.doc, original)
+
+    def test_does_not_split_inside_color_marker(self):
+        marker = "[[c:背景。仍在强调色内。尚未结束]]。"
+        self.assertEqual(self.wb._split_sentences(self.head + marker + self.tail),
+                         [self.head, marker, self.tail])
+
+
+    def test_main_switches_to_deletion_plan_within_existing_attempt_budget(self):
+        import json
+        from contextlib import ExitStack
+        snap = {"run_started_at": "2026-11-15T08:20:01+08:00",
+                "price_index_session_date": "2026-11-13",
+                "news_window": {"start": "2026-11-14T08:20:01+08:00", "end": "2026-11-15T08:20:01+08:00"}}
+        with ExitStack() as stack:
+            for name, value in (("load_snapshot", snap), ("is_thin_session", False),
+                                ("build_news_pool", []), ("load_calendar_feed", ([{}], [])),
+                                ("post_process", []), ("validate_required", []),
+                                ("focus_overlap_errors", []), ("ensure_main_title", "")):
+                stack.enter_context(patch.object(self.wb, name, return_value=value))
+            stack.enter_context(patch.object(self.wb.sys, "argv", ["write_brief.py"]))
+            stack.enter_context(patch.object(self.wb, "MAX_ATTEMPTS", 2))
+            stack.enter_context(patch.object(self.wb.Path, "write_text"))
+            stack.enter_context(patch.object(self.wb, "write_content"))
+            api = stack.enter_context(patch.object(self.wb, "call_deepseek", return_value=(json.dumps(self.doc), "stop")))
+            deletion = stack.enter_context(patch.object(self.wb, "repair_overlong_by_deletion", return_value=self.doc))
+            stack.enter_context(patch.object(self.wb, "run_build", side_effect=[
+                (0, "正文字符数(去标签): 7590"), (0, "正文字符数(去标签): 6960")]))
+            self.assertEqual(self.wb.main(), 0)
+            self.assertEqual(api.call_count, 1)
+            self.assertEqual(deletion.call_count, 1)
+            self.assertEqual(deletion.call_args.args[1], 630)
+
+
 class FocusOverlapTests(unittest.TestCase):
     FOCUS = [
         "高通宣布向亚马逊发行价值40亿美元的认股权证，涉及AI推理芯片和1.6T光连接技术，直接挑战英伟达的主导地位。",

@@ -18,6 +18,7 @@
 
 from __future__ import annotations
 
+import copy
 import datetime as dt
 import json
 import os
@@ -828,8 +829,17 @@ def visible_text_length(text: str) -> int:
 
 
 def _split_sentences(text: str) -> list[str]:
-    """按中文句末标点切句并保留标点。bullet 为单行纯文本，无 <br>。"""
-    return [t for t in re.split(r"(?<=[。！？])", text) if t]
+    """按中文句末标点切句，保留标点及完整强调色标记。"""
+    spans = [m.span() for m in re.finditer(r"\[\[(?:red|green|c):.*?\]\]", text)]
+    parts, start = [], 0
+    for match in re.finditer(r"[。！？]", text):
+        if any(left <= match.start() < right for left, right in spans):
+            continue
+        parts.append(text[start:match.end()])
+        start = match.end()
+    if start < len(text):
+        parts.append(text[start:])
+    return parts
 
 
 def _sentence_has_fact(sentence: str) -> bool:
@@ -898,6 +908,86 @@ def compress_bullets(content: dict, need_cut: int, min_bullet_chars: dict | None
                 if new_bullet != bullet:
                     section["bullets"][i] = new_bullet
     return removed
+
+
+def repair_overlong_by_deletion(content: dict, need_cut: int, day: str,
+                                profile: dict) -> dict | None:
+    """Ask for sentence IDs to delete, never model-authored replacement copy.
+
+    Work on a copy. Reject invalid plans atomically; caller still rebuilds and
+    checks the actual rendered count before accepting the result.
+    """
+    if need_cut <= 0:
+        return None
+    sentences = {}
+    choices = []
+    for section in content["sections"]:
+        sid = section["id"]
+        for bi, bullet in enumerate(section["bullets"]):
+            parts = _split_sentences(bullet)
+            sentences[(sid, bi)] = parts
+            for si, sentence in enumerate(parts):
+                # Keep the lead fact and final risk/conclusion. A marker spanning
+                # punctuation must not be cut in half.
+                if si in (0, len(parts) - 1):
+                    continue
+                if sentence.count("[[") != sentence.count("]]"):
+                    continue
+                choices.append({"section_id": sid, "bullet_index": bi,
+                                "sentence_index": si,
+                                "chars": visible_text_length(sentence), "text": sentence})
+    if not choices:
+        return None
+    prompt = (
+        "这份财经简报超出字数。只选择原句删除，不改写、不新增文字。"
+        "需要删除至少 %d、最多 %d 个可见字。优先删除跨板块重复事实、"
+        "重复背景与次要解读；保留独有核心事实、机构观点、多空方向与风险条件。"
+        "索引从0开始。每段至少保留两句，且不低于该板块字数底线。"
+        "只输出 {\"cuts\":[{\"section_id\":\"macro\",\"bullet_index\":0,"
+        "\"sentence_index\":1}]}，禁止返回整篇JSON或替换正文。\n"
+        "板块字数底线：%s\n完整原稿：%s\n可删除句子：%s"
+        % (need_cut, need_cut + 150,
+           json.dumps(profile["min_bullet_chars"], ensure_ascii=False),
+           json.dumps(content, ensure_ascii=False), json.dumps(choices, ensure_ascii=False))
+    )
+    raw, finish = call_deepseek(prompt)
+    plan = extract_json(raw)
+    if finish == "length" or not isinstance(plan, dict) or not isinstance(plan.get("cuts"), list):
+        return None
+    allowed = {(c["section_id"], c["bullet_index"], c["sentence_index"]) for c in choices}
+    selected = set()
+    for cut in plan["cuts"]:
+        if not isinstance(cut, dict):
+            return None
+        sid, bi, si = (cut.get(k) for k in ("section_id", "bullet_index", "sentence_index"))
+        if not isinstance(sid, str) or type(bi) is not int or type(si) is not int:
+            return None
+        key = (sid, bi, si)
+        if key not in allowed or key in selected:
+            return None
+        selected.add(key)
+    result = copy.deepcopy(content)
+    removed = 0
+    for section in result["sections"]:
+        sid = section["id"]
+        floor = profile["min_bullet_chars"].get(sid, 100)
+        for bi, bullet in enumerate(section["bullets"]):
+            parts = sentences[(sid, bi)]
+            kept = [part for si, part in enumerate(parts) if (sid, bi, si) not in selected]
+            if len(kept) != len(parts):
+                text = "".join(kept)
+                if len(kept) < 2 or visible_text_length(text) < floor:
+                    return None
+                section["bullets"][bi] = text
+                removed += visible_text_length(bullet) - visible_text_length(text)
+    if not need_cut <= removed <= need_cut + 150:
+        return None
+    # Re-mark existing phrases only; no visible text is introduced.
+    ensure_emphasis(result)
+    if validate_required(result, day, profile["bullet_rules"], profile["min_bullet_chars"]):
+        return None
+    print("  按句精简删除 %d 个可见字，正文只删原句、未新增或改写。" % removed, file=sys.stderr)
+    return result
 
 
 def _calendar_keywords(event: str) -> list[str]:
@@ -1507,6 +1597,7 @@ def main() -> int:
     parsed_any = False
     wrote_candidate = False
     candidate = None
+    deletion_need = 0
     best_degraded = None  # (count, content)：结构全过、仅整稿略短于硬下限的最佳候选
     best_overshoot = None  # (count, content)：结构全过、build rc=0，仅整稿略高于硬上限的最佳候选
     for attempt in range(1, MAX_ATTEMPTS + 1):
@@ -1520,18 +1611,25 @@ def main() -> int:
                 candidate, feedback or "请修复并通过全部校验。", pool,
                 day, date_cn, alert_time, as_of, index_note, qdii_label, profile,
             )
-        raw, finish_reason = call_deepseek(prompt)
-        Path("/tmp/wb_last_raw.txt").write_text(raw, encoding="utf-8")
-        print("  原始输出 %d 字符, finish=%s" % (len(raw), finish_reason), file=sys.stderr)
-        if finish_reason == "length":
-            feedback = "上次输出因过长被截断，请精简每条的措辞但保持全部板块与字段完整，确保输出完整 JSON。"
-            print("  输出被截断，重试", file=sys.stderr)
-            continue
-        content = extract_json(raw)
-        if content is None:
-            feedback = "上次输出不是有效 JSON，请只输出一个 JSON 对象，不要任何其他文字。"
-            print("  解析失败，重试", file=sys.stderr)
-            continue
+        if deletion_need:
+            content = repair_overlong_by_deletion(candidate, deletion_need, day, profile)
+            deletion_need = 0
+            if content is None:
+                print("  按句精简方案未通过校验，保留上一版并继续修复", file=sys.stderr)
+                continue
+        else:
+            raw, finish_reason = call_deepseek(prompt)
+            Path("/tmp/wb_last_raw.txt").write_text(raw, encoding="utf-8")
+            print("  原始输出 %d 字符, finish=%s" % (len(raw), finish_reason), file=sys.stderr)
+            if finish_reason == "length":
+                feedback = "上次输出因过长被截断，请精简每条的措辞但保持全部板块与字段完整，确保输出完整 JSON。"
+                print("  输出被截断，重试", file=sys.stderr)
+                continue
+            content = extract_json(raw)
+            if content is None:
+                feedback = "上次输出不是有效 JSON，请只输出一个 JSON 对象，不要任何其他文字。"
+                print("  解析失败，重试", file=sys.stderr)
+                continue
         parsed_any = True
         warnings = post_process(content, snap, pool, day, date_cn, alert_time, as_of, index_note,
                                 qdii_label, calendar_events, profile["min_bullet_chars"])
@@ -1584,6 +1682,10 @@ def main() -> int:
         # 仅整稿略高于硬上限——记为确定性压缩候选（取最接近上限者，尽量少删）
         if hmax < count <= hmax + OVERSHOOT_TOLERANCE and (best_overshoot is None or count < best_overshoot[0]):
             best_overshoot = (count, content)
+        if hmax < count <= hmax + OVERSHOOT_TOLERANCE:
+            # The next bounded attempt requests deletion IDs instead of another
+            # full draft, which may otherwise be repeated verbatim indefinitely.
+            deletion_need = count - (hmax - COMPRESS_MARGIN)
         delta = tmax - count
         direction = "增加" if delta > 0 else "减少"
         section_counts = parse_section_counts(out)
