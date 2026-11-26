@@ -24,7 +24,7 @@ python3 -m venv .venv
 .venv/bin/python build_brief.py content_YYYYMMDD.json
 ```
 
-`fetch_market.py` 是行情数据的唯一写入入口；`fetch_views.py` 用于读取最新投资观点，事件本身仍按媒体原意客观呈现。`fetch_news.py` 聚合 Bloomberg/CNBC RSS、Reuters（官方 news sitemap `reuters.com/arc/outboundfeeds/news-sitemap/`，按栏目白名单保留财经/科技/美中中东国际新闻、近 26 小时、最多 40 条；sitemap 不可达时退回 Bing News RSS `site:reuters.com`，并要求 URL 日期与 pubDate 相差不超过 1 天）、富途牛牛新闻搜索（futu-news-search）、华尔街见闻美股直播与 alphaear（财联社/华尔街见闻/雪球热榜），并在配置 `JIN10_MCP_TOKEN` 时并入金十数据快讯，输出 `news_feed.json`。新闻池按来源分级入池（`write_brief.build_news_pool`）：一级海外一手媒体 Bloomberg/Reuters/CNBC 优先、最多 60 席；二级国内实时快讯（富途、金十、华尔街见闻美股直播）；三级国内聚合热榜（财联社/华尔街见闻/雪球）；二三级不足时由剩余海外条目补满 100 条。同一事件多源时，事实、数字、时间以海外一手媒体为准。人工研究流程仍可用 `WebSearch(domain:reuters.com)` 补充核验。
+`fetch_market.py` 是行情数据的唯一写入入口；`fetch_views.py` 用于读取最新投资观点，事件本身仍按媒体原意客观呈现。`fetch_news.py` 聚合 Bloomberg/CNBC RSS、Reuters（官方 news sitemap `reuters.com/arc/outboundfeeds/news-sitemap/`，按栏目白名单保留财经/科技/美中中东国际新闻、近 26 小时、最多 40 条；sitemap 不可达时退回 Bing News RSS `site:reuters.com`，并要求 URL 日期与 pubDate 相差不超过 1 天）、富途牛牛新闻搜索（futu-news-search）、华尔街见闻美股直播与 alphaear（财联社/华尔街见闻/雪球热榜），并在配置 `JIN10_MCP_TOKEN` 时并入金十数据快讯，输出 `news_feed.json`。新闻池按来源分级入池（`write_brief.build_news_pool`）：一级海外一手媒体 Bloomberg/Reuters/CNBC 优先、最多 60 席；二级国内实时快讯（富途、金十、华尔街见闻美股直播）；三级国内聚合线索（财联社/华尔街见闻/雪球，榜单刷新时间不等于文章发布时间）；二三级不足时由剩余海外条目补满。科技/地缘各最多12条候选在截断前预留，最终池最多100条。同一事件多源时，事实、数字、时间以海外一手媒体为准。人工补查可发现新报道；必须核验原文和发布时间，写入 `supplemental_news.json` 后经同一窗口筛选入池。自动采集与人工原文核验的边界见下方“休市次日简报与主动补查”。
 
 `fetch_calendar.py` 是「本周财经日历」的唯一写入入口，输出 `calendar_feed.json`：主源为金十数据日历（jin10 MCP `list_calendar`，本自然周经济数据带 1-5 星重要性，需 `JIN10_MCP_TOKEN`），兜底与跨周补充为东方财富财经日历（`RPT_CPH_FECALENDAR`，免鉴权，含会议/发布会等事件）。脚本剔除国债竞拍、周度库存分项与 ISM 分项等噪音，按重要性、地区权重和关键指标打分，合并同一时刻同地区的数据行，默认给出未来 7 天内最多 5 条。`write_brief.py` 用它确定性回填 `calendar`，模型不再决定日期；日历源不可用时写稿直接终止。
 
@@ -42,7 +42,7 @@ python3 -m venv .venv
 
 正文强调色同样是构建与发布硬门禁：alert 至少 2 处，每条 bullet 至少 1 处，`focus` / `ai_tech` 平均每条至少 2 处；单处最多 40 字。`[[red:...]]` 用于上涨、改善或利多，`[[green:...]]` 用于下跌、恶化或利空，`[[c:...]]` 用于关键事实、机构观点、结论和验证条件。写稿器会确定性圈选既有短语补齐遗漏的 `c` 色，不改变可见文字；写稿、构建、发布三个入口共用 `content_validation.py`，手工 JSON 也不能绕过。
 
-字数按读者实际看到的正文计算，`[[c:...]]`、`[[red:...]]`、`[[green:...]]`、`**` 等轻量排版语法本身不计入长度。单段目标用于引导完整论证，结构阶段只拦截少于 100 个可见字符的明显碎段；最终仍以整稿 5,000–7,000 字硬门禁为准，避免把有限重试耗在无编辑价值的个位数字符差上。
+字数按读者实际看到的正文计算，`[[c:...]]`、`[[red:...]]`、`[[green:...]]`、`**` 等轻量排版语法本身不计入长度。单段目标用于引导完整论证，结构阶段只拦截少于 100 个可见字符的明显碎段；整稿范围按版式检查：普通版5,000–7,000字，上一自然日非美股交易日版4,500–6,000字；后者单段底线为90字。构建器输出统计，写稿器负责篇幅放行与修复，不能把构建退出码0单独等同于字数达标；普通版偏短容差另见下文退出码3说明。
 
 正文 bullet 的唯一合法类型是字符串。若模型返回 `{ "text": "...", "emphasis": "..." }`，写稿器只提取 `text`，绝不调用 `str(dict)`；未知对象直接失败。构建器和发布器会通用扫描 JSON 与最终 HTML 中的 Python/JSON 对象字面量、`dict(...)`、`OrderedDict(...)` 等程序结构，不依赖固定字段名；发现残留即阻止生成或更新公众号草稿。
 
@@ -81,7 +81,7 @@ python3 -m venv .venv
 ]
 ```
 
-`published_at` 必须是带时区的 ISO 8601 时间。每个正文板块都要有来源映射；来源早于 `as_of-24小时`、晚于 `as_of`，或无法确认具体发布时间时，生成器会停止构建。新闻来源：Bloomberg/CNBC RSS、Reuters（官方 news sitemap，Bing News 兜底）、富途牛牛新闻搜索、金十数据（jin10，配置 `JIN10_MCP_TOKEN` 时）、华尔街见闻美股直播与 alphaear 聚合（财联社/华尔街见闻/雪球热榜），海外一手媒体优先入池。人工研究流程可通过 `WebSearch(domain:reuters.com)` 补充核验 Reuters；任务不得连接、搜索或读取 Gmail 及任何邮件来源。
+`published_at` 必须是带时区的 ISO 8601 时间。每个正文板块都要有来源映射；来源早于 `as_of-24小时`、晚于 `as_of`，或无法确认具体发布时间时，生成器会停止构建。新闻来源：Bloomberg/CNBC RSS、Reuters（官方 news sitemap，Bing News 兜底）、富途牛牛新闻搜索、金十数据（jin10，配置 `JIN10_MCP_TOKEN` 时）、华尔街见闻美股直播与 alphaear 聚合（财联社/华尔街见闻/雪球热榜），海外一手媒体优先入池。热榜只作线索，核实文章原文和带时区时间后才可入池；人工补查可经 `supplemental_news.json` 登记新报道；任务不得连接、搜索或读取 Gmail 及任何邮件来源。
 
 ## 行情口径
 
@@ -99,3 +99,7 @@ python3 -m venv .venv
 采集增加CNBC科技/国际专题与地缘关键词；新闻池预留科技/地缘候选，保留URL及最多1500字摘要，修订提供完整新闻池。榜单刷新时间不能作为文章发布时间。主动核验的海外媒体/官方原文写入 supplemental_news.json（items含verified=true、https URL、title、source_id、source_name、带时区published_at、summary），经同样的时效/去重处理后才可用于写稿。
 
 触发按有效行情快照最近美股交易日与昨日日期比较，覆盖周日、周一及美股节假日次日。正常周六与普通交易日次日仍走5000–7000字；构建入口核对版式中的交易日必须与快照一致。
+
+自动能力边界：`run_brief.sh` 调用 `fetch_news.py` 获取专题RSS和关键词搜索，`write_brief.py`读取已存在的补查清单；当前没有自动WebSearch或官方原文逐篇抓取/验证环节，`verified=true`由补查执行者确认，并非脚本自行证明。需要全自动官方原文补查时，须另行实现与验收，不能把清单读取能力当作已完成此功能。
+
+休市次日版的历史验收见 [简报规则与验收记录](docs/current-state.md)。

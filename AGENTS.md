@@ -29,7 +29,7 @@
    - 不得连接、搜索或读取 Gmail 及任何邮件来源；邮件通讯不进入候选池。
    - 仅允许有明确发布时间且带时区的信息进入正文。超过 24 小时、晚于本期截止点、只有日期没有具体时间，或无法确认发布时间的信息一律剔除。
    - **海外一手媒体优先**：Bloomberg/Reuters/CNBC 为一级来源，优先入池（最多 60/100 席）；富途、金十、华尔街见闻美股直播为二级；财联社/华尔街见闻/雪球热榜为三级。同一事件多源报道时，事实、数字、时间以海外一手媒体为准，国内来源只补充 A 股/港股/国内政策视角。
-   - 新闻来源固定使用：**Bloomberg/CNBC RSS**；**Reuters 官方 news sitemap**（`fetch_news.py` 已并入，不可达时退回 Bing News `site:reuters.com`）；**金十数据（jin10）快讯+文章列表+关键词快讯搜索**；**alphaear 脚本聚合** 的财联社/华尔街见闻/雪球热榜；**富途牛牛 futu-news-search**（`fetch_news.py` 已并入）；**华尔街见闻·美股直播**（`api-one.wallstcn.com/apiv1/content/lives?channel=us-stock-channel`，`fetch_news.py` 已并入）；**WebSearch**（含 domain:reuters.com）只用于核验新闻池内已有事实的时间、数字与表述。不使用新浪财经新闻搜索（余额不稳定），不派生代理。
+   - 新闻来源固定使用：**Bloomberg/CNBC RSS**；**Reuters 官方 news sitemap**（`fetch_news.py` 已并入，不可达时退回 Bing News `site:reuters.com`）；**金十数据（jin10）快讯+文章列表+关键词快讯搜索**；**alphaear 脚本聚合** 的财联社/华尔街见闻/雪球热榜；**富途牛牛 futu-news-search**（`fetch_news.py` 已并入）；**华尔街见闻·美股直播**（`api-one.wallstcn.com/apiv1/content/lives?channel=us-stock-channel`，`fetch_news.py` 已并入）；**WebSearch**（含 domain:reuters.com）可补查海外媒体和官方新进展；原文及带时区发布时间核验后登记 `supplemental_news.json`，入池通过24小时时效校验后才可使用。不使用新浪财经新闻搜索（余额不稳定），不派生代理。
    - 搜索全流程最多 5 组（AI/科技与宏观必查，地缘仅有实质进展时查，焦点深挖最多 2 组），同一主题不得换关键词重复搜索。
    - 这 5 组搜索应**一次性并行发出**，不要串行等待。不再批量 WebFetch 文章原文（2026-09-27 实测 11 篇里 10 篇被 CNBC/NPR/富途等站点拦截或无正文，白耗时间）。
    - **正文事实严格只用新闻池**：生产（DeepSeek）由 `write_brief.build_news_pool` 从 `news_feed.json` 构建新闻池（`[as_of-24h, as_of]` 窗口内、去重、按来源分级）；云端写稿通道（已暂停）用 `cloud_collect.sh` 生成的同口径 `news_pool.json`（`make_news_pool.py`）。新闻池是唯一新闻事实来源，`sources` 也只能从中选。主动搜索获得的新事实必须核验原文并登记 supplemental_news.json，入池通过时效校验后才可写入正文；仅搜索摘要不得直接引用。
@@ -38,8 +38,8 @@
    - **构造 JSON 必须使用 Python `json.dump()`**，不要手写 JSON 字符串——中文弯引号 `””` 与 JSON 半角引号 `””` 视觉相似但解析不兼容，手写极易浪费多轮重试。
    - 可复制 `content_template.json` 作为起点，修改 date/meta/content 后一次生成。
    - 固定板块：focus、ai_tech、stock_rotation、iran（可选，仅实质进展时）、macro、commodity。
-   - 每个板块必填 `id` / `title` / `bullets` / `note`。基准结构为 focus 3 条、ai_tech 4 条、stock_rotation 2 条、iran 3 条、macro 3 条、commodity 2 条；无 iran 时 focus/ai_tech 可各增加 1 条，重大信号充足时 stock_rotation/macro 可各增加 1 条。
-   - 每条 bullet 是一个完整论证段，不是资讯卡片；commodity 固定两段，第一段写黄金，第二段合并布伦特原油期货与美元指数。
+   - 每个板块必填 `id` / `title` / `bullets` / `note`。以下为普通版基准；休市次日版采用下方专用结构。基准结构为 focus 3 条、ai_tech 4 条、stock_rotation 2 条、iran 3 条、macro 3 条、commodity 2 条；无 iran 时 focus/ai_tech 可各增加 1 条，重大信号充足时 stock_rotation/macro 可各增加 1 条。
+   - 每条 bullet 是一个完整论证段，不是资讯卡片；普通版commodity固定两段，第一段写黄金，第二段合并布伦特原油期货与美元指数。
    - 周末可沿用结构；各标的均由本次快照按自身市场状态给出最新可得值，休市标的显示最近交易值。不得复制旧快照、旧行情或过期新闻。
 4. 运行 `.venv/bin/python build_brief.py content_YYYYMMDD.json`。生成器会硬性校验动态 24 小时来源窗口、行情快照有效性、快照与 `as_of` 一致性及逐项报价时间/市场状态；校验失败不得生成或发布。
    - HTML 成稿后必须再做一轮独立终检：简报日期及文中所有“年月日（周几）”必须与真实日历一致，不得出现“（周）”“周X”“X月X日”“COPY_FROM”等空值或模板占位符；终检失败禁止发布。`publish_wechat.py` 必须在发布入口再复核一次，防止绕过构建流程直接发布错误 HTML。
@@ -52,7 +52,7 @@
 
 ## 上一日非美股交易日的简报规则（2026-11-15 用户确认）
 
-- 上一自然日不是美股交易日时，自动设置 `edition=nontrading_incremental` 和快照最近交易日 `market_session_date`， 正文硬范围 **4500–6000字**、目标5000–5600字，只允许适度缩短；普通日仍为5000–7000字。不得为了去重将内容砍到3900字或省掉有实质进展的美股科技、地缘板块。
+- 上一自然日不是美股交易日时，自动设置 `edition=nontrading_incremental` 和快照最近交易日 `market_session_date`，正文硬范围 **4500–6000字**、目标5000–5600字，只允许适度缩短；普通日仍为5000–7000字。去重应靠补充新增事实完成，不得因此低于篇幅下限或省掉有实质进展的美股科技、地缘板块。
 - 判定依据为本次有效行情快照的最近美股价格指数交易日早于昨日日期；覆盖周日、周一、美股节假日与临时休市次日。正常周六（周五有交易）及普通交易日次日不触发。构建时将版式交易日元数据与快照交叉核验；无有效快照不得按星期猜测。历史 `sunday_incremental` 仅兼容已生成的周日稿。
 - 保留严格24小时窗口，正文以最新12小时为主；主动补查海外媒体及官方信息。北京时间08:20是计划触发点，重做时重新取有效快照固化本次as_of，不能拿早晨窗口限制晚上新稿。
 - 同一事件只要有新增决定、声明、数据或实质进展就继续追踪，只删除旧事实复述；不得因昨日写过英伟达或中东而整条排除。
@@ -63,13 +63,13 @@
 ## 内容规则
 
 - 固定板块顺序：focus、ai_tech、stock_rotation、iran（可选）、macro、commodity。
-- `ai_tech` 是核心板块；commodity 固定两段（黄金一段；布伦特原油期货与美元指数合并一段）。
+- `ai_tech` 是核心板块；普通版commodity固定两段（黄金一段；布伦特原油期货与美元指数合并一段）。
 - 事件客观呈现；解读用”课代表视角/框架”，不用”用户视角”。
 - **人名简称**：成稿中「习近平」一律写作「习」（含标题、导读、正文、逻辑框架、note；如“国家主席习”“习主席”）。`build_brief.py` 构建时按 `content_validation.NAME_ABBREVIATIONS` 自动替换并回写 content（`sources` 来源登记保留新闻原标题），成稿终检与 `publish_wechat.py` 发现残留全称即拦截。
 - **主语必须点名，旧闻不得换时间戳混入**：涉及具体公司/机构的事实必须写出名称，严禁用“芯片巨头”“存储龙头”“某公司”等泛称指代单一主体（`write_brief.validate_required` 拦截并打回修复）。`fetch_news.py` 每次采集把标题累积进 `news_history.json`（保留 10 天）；`write_brief.build_news_pool` 入池前剔除两类条目并在日志打印：标题为泛称主语且无摘要的标题党；与窗口外旧新闻共享同一辨识度数字（带“亿/万亿”的金额或带小数的百分比）且标题至少 2 个中文双字重合的旧闻转载。
 - **事实与解读分离**：新闻事实（谁、发生了什么、官方数据、公司财报数字）严格按新闻原文客观呈现，原样引用数字，不套用主观立场；若观点本身就来自新闻（机构/官方表态），照写不改。
 - **解读必须对齐用户观点（仅方向）**：所有投资解读/观点部分（课代表点评、逻辑判断、路径分析、风险提示，以及对黄金/AI·半导体/地缘/美联储/资金轮动的方向判断）必须对齐飞书「股市马斯克文章发表」**最近 3 篇文章**（最新一篇最权威，观点以最新为准）的多空方向。**飞书文章只提供方向观点，绝不是素材**：`write_brief.py` 先把飞书原文提炼成纯"立场清单"（只保留各主题多空方向与要点，剥离标题、措辞、数字、事件细节），再喂给写稿模型；**严禁**引用飞书标题、措辞、价格/持仓数字或事件表述作为正文内容。
-- **新闻内容来源红线**：正文所有新闻事实、数据、事件、人物言论、公司财报数字只能来自新闻池（云端通道（已暂停）为 `news_pool.json`；生产 DeepSeek 通道为 `write_brief.py` 从 `news_feed.json` 构建的新闻池）与 `market_snapshot.json`（行情），WebSearch 结果不得引入池外事实，飞书观点绝不进入新闻事实部分。**正文严禁出现"据XX报道""据报道""有报道称""据报""据XX称"等来源转述/出处表述**——事实直接客观陈述，不标注、不转述新闻来源；来源登记只存在 JSON `sources` 字段（脚本自动挂接），不进入成稿正文。
+- **新闻内容来源红线**：正文所有新闻事实、数据、事件、人物言论、公司财报数字只能来自新闻池（云端通道（已暂停）为 `news_pool.json`；生产 DeepSeek 通道由 `write_brief.py` 合并 `news_feed.json` 与已核验 `supplemental_news.json` 后筛选）与 `market_snapshot.json`（行情）；WebSearch新线索须先核验原文并登记入池，禁止直接引用搜索摘要，飞书观点绝不进入新闻事实部分。**正文严禁出现"据XX报道""据报道""有报道称""据报""据XX称"等来源转述/出处表述**——事实直接客观陈述，不标注、不转述新闻来源；来源登记只存在 JSON `sources` 字段（脚本自动挂接），不进入成稿正文。
 - **本周财经日历必须来自确定性日历源（防空表与错日期）**：`calendar` 由 `fetch_calendar.py` 产出的 `calendar_feed.json` 回填，模型/人工都不得自行决定日期。日期列固定写成「9月4日 周五」并附 `date_iso`；条目 1-6 条、按日期升序、不得早于简报日期、不得超出 10 天展望窗口。`content_validation.validate_calendar()` 在写稿、构建、发布三个入口硬拦截（空表、星期错配、过期或越界日期、乱序一律失败）。日历源全部不可用时才退回 `sanitize_calendar()` 的新闻池溯源清洗，宁可少、不可错。
 - **标题必须是高信息密度新闻播报**：优先两行；第一行写主事件及直接市场反应，第二行写另一条足以影响定价的科技、宏观、地缘或大宗副线。每行可放 1-2 个紧密相关的事实信号、最多 24 字；事实、数字、方向和因果须可溯源。禁止投资观点、预测、问句/感叹号、标题党、来源转述、内部口径和飞书标题/改写。模型标题不合规时只单独修复标题，不得因此丢弃并重写整篇；单独修复最多两轮，仍失败时用新闻池真实头条生成兜底标题（不足才补指数/大宗行情行）；全标题少于 8 字一律判不合规，禁止“费半上涨”式指数涨跌短标题。详见 [`docs/title-style.md`](docs/title-style.md)。
 - **头号焦点不与后文重复**：focus 只讲当天定价权重最高的一件事并讲透；focus 里出现过的公司+数字（金额、涨跌幅、点位、订单/持仓规模），其他板块不得再次叙述，只写该事件在本板块的增量含义或其他独有事实（alert 作为摘要不受限）。`write_brief.focus_overlap_errors()` 在写稿阶段累计 ≥2 句复述即打回定向修复，最后两轮仅告警。
@@ -102,8 +102,8 @@
 | `日期星期错配` / `早于简报日期` | 手改了 calendar 日期 | 照抄 calendar_feed.json，不要手写日期 |
 | `calendar_feed.json 已过期` | 距抓取超过 12 小时 | 重新运行 fetch_calendar.py |
 | `content.as_of 与行情快照不匹配` | as_of 与 market_snapshot.run_started_at 不一致 | 原样复制 run_started_at |
-| `正文字符数超限` | 超 7000 字 | 看分段统计，找最大的 2-3 个板块各砍半条 bullet |
-| `正文字符数偏少` | 不足 5000 字 | 优先在 ai_tech 或 focus 加一条完整 bullet |
+| `正文字符数超限` | 超过当前版式上限（普通7000、休市次日6000） | 看分段统计，找最大的 2-3 个板块各砍半条 bullet |
+| `正文字符数偏少` | 低于当前版式下限（普通5000、休市次日4500） | 优先在 ai_tech 或 focus 加一条完整 bullet |
 
 ## 效率核心原则
 
@@ -136,7 +136,7 @@
 - 服务器 crontab 只保留这一行（`CRON_TZ=Asia/Shanghai`）：`20 8 * * * mkdir -p /home/ubuntu/finance-brief/logs && /usr/bin/flock -n /tmp/finance-brief.lock /home/ubuntu/finance-brief/run_brief.sh >> /home/ubuntu/finance-brief/logs/cron.log 2>&1`。`server_publish.sh` 的 cron 已移除。
 - 服务器 `.secrets.env`（chmod 600）必填 `DEEPSEEK_API_KEY`、`BRIEF_GITHUB_TOKEN`（同步代码用，只读）；`JIN10_MCP_TOKEN`、`LARK_APP_ID`、`LARK_APP_SECRET` 按数据源需要选配。cron 重定向前必须先创建 `logs/`。
 - **写稿模型**：`write_brief.py` 默认 `deepseek-flash`（DeepSeek V4.1 Flash，非思维模式，temperature 0.6）。`deepseek-flash` 默认开思维模式，请求体必须带 `"thinking": {"type": "disabled"}`，否则推理 token 挤占 `max_tokens` 导致正文截断（20261013 事故），可用环境变量 `DEEPSEEK_MODEL` 覆盖，服务器 `.secrets.env` 当前未设置。旧别名 `deepseek-chat` 目前仍路由到同一模型，但可能被下线，不要再写回。换模型前先用 `GET https://api.deepseek.com/models` 确认可用名。
-- `fetch_views.py` 失败属于非致命告警；行情、新闻或财经日历失败（`fetch_calendar.py` 重试一次仍失败）、结构/字数校验失败、构建失败均必须终止。DeepSeek 自动稿没有实时 WebSearch，发布前建议复核关键数字。
+- `fetch_views.py` 失败属于非致命告警；行情、新闻或财经日历失败（`fetch_calendar.py` 重试一次仍失败）、结构/字数校验失败、构建失败均必须终止。DeepSeek自动稿没有实时WebSearch或官方原文逐篇核验；专题/关键词采集自动运行，`supplemental_news.json`需由补查执行者核验后提供。不得把读取补查清单描述为自动完成官方核验；发布前建议复核关键数字。
 - **云端写稿通道（已暂停，保留待复用）**：2026-09-27 至 10-08 曾由 Claude Code cloud Routine 写稿、经 GitHub `briefs` 分支交接、服务器 `server_publish.sh` 发布。用户已于 10-09 主动停用 Routine，相关代码（`cloud_collect.sh`、`cloud_handoff.py`、`make_news_pool.py`、`server_publish.sh`）保留但不运行。恢复步骤见 [`docs/cloud-routine.md`](docs/cloud-routine.md)；恢复时必须先注释掉服务器的 `run_brief.sh` cron，同一天只能有一个发布者。
 
 ## 代码同步
